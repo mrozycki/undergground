@@ -1,34 +1,29 @@
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
+
+#include "grader.h"
+
 using namespace std;
 
-int main(int argc, char **argv)
+namespace ugg {
+int grade(const char* problemid, bool debug)
 {
 	setvbuf(stdout, NULL, _IONBF, 0);
-	if (argc < 2)
-	{
-		printf ("ERROR -2\n");
-		return 0;
-	}
-
-	bool debug = (argc > 2);
 
 	bool passed = true;
-	
-	char *problemid = argv[1];
-	
+
 	char testpath[32];
 	sprintf(testpath, "problems/%s/tests", problemid);
 	FILE *testfile = fopen(testpath, "r");
 	if (!testfile)
 	{
-		printf("ERROR -1\n");
-		return 0;
+		return -1;
 	}
 
 	int testnum;
@@ -76,7 +71,7 @@ int main(int argc, char **argv)
 				write (cpipe[1], "5", 2);
 				close(cpipe[1]);
 				if (debug) printf ("$%dexec\n", i);
-				return 0;
+				exit(0);
 			}
 			close(outpipe[1]);
 
@@ -104,8 +99,7 @@ int main(int argc, char **argv)
 				fclose(indata);
 				close(cpipe[1]);
 				if (debug) printf ("$%dsender\n", i);
-
-				return 0;
+				exit(0);
 			}
 
 			// fork receiver
@@ -142,8 +136,7 @@ int main(int argc, char **argv)
 				fclose(outdata);
 				close(cpipe[1]);
 				if (debug) printf ("$%dreceiver\n", i);
-
-				return 0;
+				exit(0);
 			}
 
 			// wait
@@ -173,8 +166,7 @@ int main(int argc, char **argv)
 			}
 			close(cpipe[1]);
 			if (debug) printf ("$%dtester\n", i);
-
-			return 0;
+			exit(0);
 		}
 		else
 		{
@@ -195,7 +187,7 @@ int main(int argc, char **argv)
 				usleep(1000*10000);
 				write(cpipe[1], "0", 10);
 				close(cpipe[1]);
-				return 0;
+				exit(0);
 			}
 
 			int grade = 0;
@@ -259,15 +251,14 @@ int main(int argc, char **argv)
 				continue;
 			if (grade != 7)
 			{
-				printf ("GRADE %d\n", grade + i*8);
 				passed = false;
-				break;
+				return grade + i*8;
 			}
 		}
 	}
 
-	if (passed)
-		printf ("GRADE 7\n");
-
-	return 0;
+	if (passed) {
+		return 7;
+	}
+}
 }

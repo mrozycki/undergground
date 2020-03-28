@@ -5,6 +5,9 @@
 #include <sys/wait.h>
 #include <sys/prctl.h>
 #include <mysql.h>
+
+#include "grader.h"
+
 using namespace std;
 
 int main(int argc, char **argv)
@@ -75,35 +78,14 @@ int main(int argc, char **argv)
 				pclose(compilation);
 
 				printf ("[ OK ] Running ");
-				sprintf (query, "bin/grader %s", r[1]);
+				auto grade = ugg::grade(r[1]);
 
-				judgement = popen(query, "r");
-
-				if (!judgement)
-				{
-					printf ("popen fail");
-					continue;
-				}
-
-				char chunk[64] = "";
-				while (strcmp(chunk, "GRADE") && strcmp(chunk, "ERROR"))
-				{
-					fscanf(judgement, "%s", chunk);
-					if (!strcmp(chunk, "TEST"))
-					{
-						fscanf(judgement, "%s", chunk);
-						printf("%s,", chunk);
-					}
-				}
-				fscanf(judgement, "%s", chunk);
-				pclose(judgement);
-
-				if (!strcmp(chunk, "7"))
+				if (grade == 7)
 					printf ("\t\t[ OK ]\n");
 				else
-					printf ("\t\t[FAIL] (%s)\n", chunk);
+					printf ("\t\t[FAIL] (%d)\n", grade);
 
-				sprintf(query, "UPDATE submissions SET grade='%s', checktime=CURRENT_TIMESTAMP WHERE id = '%s';", chunk, r[0]);
+				sprintf(query, "UPDATE submissions SET grade='%d', checktime=CURRENT_TIMESTAMP WHERE id = '%s';", grade, r[0]);
 				mysql_real_query(&db, query, strlen(query));
 			}
 
