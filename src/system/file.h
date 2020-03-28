@@ -1,10 +1,16 @@
 #pragma once
 
+#include <string_view>
+
+#include <boost/filesystem.hpp>
+
 namespace ugg {
 namespace system {
 class file {
 public:
     file(int fd, std::string_view mode = "r") : file_(fdopen(fd, mode.data())) { }
+    file(boost::filesystem::path const& path, std::string_view mode = "r")
+        : file_(fopen(path.c_str(), mode.data())) { }
 
     ~file() {
         // fclose(file_);
