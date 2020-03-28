@@ -6,7 +6,7 @@
 #include "process.h"
 
 namespace ugg {
-std::optional<std::string> compile(std::string const& source_file) {
+std::optional<std::string> compile(std::string_view source_file) {
     spdlog::info("Compiling file {}", source_file);
 
     auto command = fmt::format("g++ -O2 -Wall solutions/{} -o solution 2>&1", source_file);

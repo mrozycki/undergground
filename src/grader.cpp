@@ -13,14 +13,14 @@
 using namespace std;
 
 namespace ugg {
-int grade(const char* problemid, std::string const& executable_path)
+int grade(std::string_view problemid, std::string_view executable_path)
 {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	bool passed = true;
 
 	char testpath[32];
-	sprintf(testpath, "problems/%s/tests", problemid);
+	sprintf(testpath, "problems/%s/tests", problemid.data());
 	FILE *testfile = fopen(testpath, "r");
 	if (!testfile)
 	{
@@ -35,8 +35,8 @@ int grade(const char* problemid, std::string const& executable_path)
 		spdlog::info("Running test {}/{}", i, testnum);
 		char inpath[32], outpath[32], infile[32], outfile[32];
 		fscanf(testfile, "%s %s", infile, outfile);
-		sprintf(inpath, "problems/%s/%s", problemid, infile);
-		sprintf(outpath, "problems/%s/%s", problemid, outfile);
+		sprintf(inpath, "problems/%s/%s", problemid.data(), infile);
+		sprintf(outpath, "problems/%s/%s", problemid.data(), outfile);
 		int maxmem, maxtime;
 		fscanf(testfile, "%d %d", &maxmem, &maxtime);
 		spdlog::debug("Test details: inpath={}, outpath={}, maxmem={}, maxtime={}", inpath, outpath, maxmem, maxtime);
@@ -68,7 +68,7 @@ int grade(const char* problemid, std::string const& executable_path)
 
 				dup2 (inpipe[0], STDIN_FILENO);
 				dup2 (outpipe[1], STDOUT_FILENO);
-				execl (executable_path.c_str(), executable_path.c_str(), NULL);
+				execl (executable_path.data(), executable_path.data(), NULL);
 				write (cpipe[1], "5", 2);
 				close(cpipe[1]);
 				spdlog::debug("Solution process finished");

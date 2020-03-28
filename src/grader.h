@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string_view>
+
 namespace ugg {
-int grade(char const* problem_id, std::string const& executable_path);
+int grade(std::string_view problem_id, std::string_view executable_path);
 }

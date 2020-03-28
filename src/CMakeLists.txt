@@ -1,12 +1,16 @@
 add_executable(undergground
-    main.cpp
+    compiler.cpp
+    database.cpp
     grader.cpp
-    compiler.cpp)
+    main.cpp
+)
 
 target_link_libraries(undergground PUBLIC
     CONAN_PKG::fmt
     CONAN_PKG::spdlog
-    CONAN_PKG::mysql-connector-c)
+    CONAN_PKG::mysql-connector-c
+)
 
 set_target_properties(undergground PROPERTIES
-    CXX_STANDARD 17)
+    CXX_STANDARD 17
+)

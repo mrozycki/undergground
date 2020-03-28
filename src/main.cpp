@@ -1,16 +1,21 @@
-#include <cstdio>
-#include <cstring>
-#include <cstdlib>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/prctl.h>
-#include <mysql.h>
+#include <chrono>
+#include <csignal>
+#include <thread>
+
+#include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
 #include "compiler.h"
+#include "database.h"
 #include "grader.h"
 
-int process_submission(char const* id, char const* problem, char const* submission_file) {
+bool keep_going = true;
+void signal_handler(int signum) {
+	spdlog::info("Received kill signal");
+	keep_going = false;
+}
+
+int process_submission(std::string_view id, std::string_view problem, std::string_view submission_file) {
 	spdlog::info("Processing submission request #{}; problem {}", id, problem);
 	auto executable_path = ugg::compile(submission_file);
 	if (!executable_path) {
@@ -21,56 +26,39 @@ int process_submission(char const* id, char const* problem, char const* submissi
 }
 
 int main()
-{
-	MYSQL db;
-	MYSQL_RES *result;
-	MYSQL_ROW r;
-	char query[1024];
+try {
+	signal(SIGINT, signal_handler);
 
 	spdlog::info("Starting the grader daemon");
 	spdlog::info("Initializing database");
-	if (!mysql_init(&db))
-	{
-		spdlog::error("Failed to initialize database: {}", mysql_error(&db));
-		return 0;
-	}
-
-	spdlog::info("Connecting to database at '{}'", "127.0.0.1");
-	if (!mysql_real_connect(&db, "127.0.0.1", "grader", "123456", "undergground", 0, NULL, 0))
-	{
-		spdlog::error("Failed to connect to database: {}", mysql_error(&db));
-		return 0;
-	}
+	auto db = ugg::db::connection("127.0.0.1", "grader", "123456", "undergground");
 
 	spdlog::info("Waiting for submissions");
-	while (true)
+	while (keep_going)
 	{
-		sprintf(query, "SELECT submissions.id, category, storage FROM submissions, problems WHERE problemid = problems.id AND grade = '0'");
-		if (mysql_real_query(&db, query, strlen(query)) != 0)
-		{
-			spdlog::error("Database query failed: {}", mysql_error(&db));
-			continue;
-		}
+		auto result = db.query(R"(
+			SELECT submissions.id, category, storage
+			FROM submissions, problems
+			WHERE problemid = problems.id AND grade = '0'
+		)");
 
-		result = mysql_store_result(&db);
-		if (!result)
+		while (auto row = result.next_row())
 		{
-			spdlog::error("Database query result storage failed: {}", mysql_error(&db));
-			continue;
-		}
-
-		while ((r = mysql_fetch_row(result)))
-		{
-			auto grade = process_submission(r[0], r[1], r[2]);
+			auto grade = process_submission((*row)[0], (*row)[1], (*row)[2]);
 			spdlog::info("Storing grade in database");
-			sprintf(query, "UPDATE submissions SET grade='%d', checktime=CURRENT_TIMESTAMP WHERE id = '%s';", grade, r[0]);
-			mysql_real_query(&db, query, strlen(query));
+			db.query(fmt::format(R"(
+				UPDATE submissions
+				SET grade = '{}', checktime = CURRENT_TIMESTAMP
+				WHERE id = '{}'
+			)", grade, (*row)[0]));
 		}
 
-		sleep(1);
+		std::this_thread::sleep_for(std::chrono::seconds(1));
 	}
 
-	mysql_close(&db);
-	spdlog::info("Disconnecting from database");
 	return 0;
+} catch (std::exception const& e) {
+	spdlog::critical(e.what());
+} catch (...) {
+	spdlog::critical("Unkown error occurred. Exiting");
 }
