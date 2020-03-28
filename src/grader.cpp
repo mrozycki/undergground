@@ -6,6 +6,7 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/prctl.h>
+#include <spdlog/spdlog.h>
 
 #include "grader.h"
 
@@ -31,14 +32,14 @@ int grade(const char* problemid, bool debug)
 
 	for (int i = 1; i <= testnum; i++)
 	{
-		printf("TEST %d\n", i);
+		spdlog::info("Running test {}/{}", i, testnum);
 		char inpath[32], outpath[32], infile[32], outfile[32];
 		fscanf(testfile, "%s %s", infile, outfile);
 		sprintf(inpath, "problems/%s/%s", problemid, infile);
 		sprintf(outpath, "problems/%s/%s", problemid, outfile);
 		int maxmem, maxtime;
 		fscanf(testfile, "%d %d", &maxmem, &maxtime);
-		if (debug) printf ("!%d %s %s %d %d\n", i, inpath, outpath, maxmem, maxtime);
+		spdlog::debug("Test details: inpath={}, outpath={}, maxmem={}, maxtime={}", inpath, outpath, maxmem, maxtime);
 
 		pid_t pidSolution, pidTester, pidLimiter, pidSender, pidReceiver;
 		int cpipe[2]; pipe(cpipe);
@@ -51,10 +52,10 @@ int grade(const char* problemid, bool debug)
 			pipe(inpipe);
 			pipe(outpipe);
 
-			// fork and exec solution
 			pidSolution = fork();
 			if (!pidSolution)
 			{
+				spdlog::debug("Starting solution process");
 				prctl(PR_SET_PDEATHSIG, 9);
 				struct rlimit memlimit, proclimit;
 				memlimit.rlim_cur = 128*1024*1024;
@@ -70,16 +71,15 @@ int grade(const char* problemid, bool debug)
 				execl ("solution", "solution", NULL);
 				write (cpipe[1], "5", 2);
 				close(cpipe[1]);
-				if (debug) printf ("$%dexec\n", i);
+				spdlog::debug("Solution process finished");
 				exit(0);
 			}
 			close(outpipe[1]);
 
-			// fork sender
 			pidSender = fork();
 			if (!pidSender)
 			{
-				// load and send input data
+				spdlog::debug("Starting input sender process");
 				FILE *indata = fopen(inpath, "r");
 				char instr[32];
 				int k = 0;
@@ -87,26 +87,19 @@ int grade(const char* problemid, bool debug)
 				{
 					write (inpipe[1], instr, strlen(instr));
 					write (inpipe[1], "\n", 1);
-					if (debug)
-					{
-						if (k%10000 == 0)
-							printf ("*%d %d\n", i, k);
-						k++;
-					}
 				}
 				write (inpipe[1], "", 1);
 				close(inpipe[1]);
 				fclose(indata);
 				close(cpipe[1]);
-				if (debug) printf ("$%dsender\n", i);
+				spdlog::debug("Input sender process finished");
 				exit(0);
 			}
 
-			// fork receiver
 			pidReceiver = fork();
 			if (!pidReceiver)
 			{
-				// load and check output data
+				spdlog::debug("Starting output receiver process");
 				char outstr[32], ansstr[32];
 				FILE *outdata = fopen(outpath, "r");
 				FILE *answer = fdopen(outpipe[0], "r");
@@ -116,7 +109,6 @@ int grade(const char* problemid, bool debug)
 				{
 					if (strcmp(ansstr, outstr))
 					{
-						printf ("? %s %s\n", outstr, ansstr);
 						write(cpipe[1], "6", 2);
 						break;
 					}
@@ -135,7 +127,7 @@ int grade(const char* problemid, bool debug)
 				fclose(answer);
 				fclose(outdata);
 				close(cpipe[1]);
-				if (debug) printf ("$%dreceiver\n", i);
+				spdlog::debug("Output receiver process finished");
 				exit(0);
 			}
 
@@ -149,7 +141,8 @@ int grade(const char* problemid, bool debug)
 			struct rusage usage;
 			getrusage(RUSAGE_CHILDREN, &usage);
 			long tusage = (usage.ru_utime.tv_sec+usage.ru_stime.tv_sec)*1000 + (usage.ru_utime.tv_usec+usage.ru_stime.tv_usec)/1000;
-			printf (">%d USAGE: %ld/%dkb %ld/%dms\n", i, usage.ru_maxrss, maxmem, tusage, maxtime);
+			spdlog::info("Memory usage: {}/{}kb", usage.ru_maxrss, maxmem);
+			spdlog::info("Time taken: {}/{}ms", tusage, maxtime);
 
 			if (usage.ru_maxrss > maxmem)
 			{
@@ -165,7 +158,7 @@ int grade(const char* problemid, bool debug)
 				write (cpipe[1], "3", 2);
 			}
 			close(cpipe[1]);
-			if (debug) printf ("$%dtester\n", i);
+			spdlog::debug("Tester finished");
 			exit(0);
 		}
 		else
@@ -175,7 +168,7 @@ int grade(const char* problemid, bool debug)
 			{
 				if (chunk[0] == '8')
 				{
-					if (debug) printf(">%d Time Start\n", i);
+					spdlog::debug("Starting timer");
 					break;
 				}
 			}
@@ -195,22 +188,21 @@ int grade(const char* problemid, bool debug)
 			close(cpipe[1]);
 			while (read (cpipe[0], chunk, 1))
 			{
-				if (debug) printf(":%d(%c)\n", chunk[0], chunk[0]);
 				if (chunk[0] == '9')
 				{
-					if (debug) printf(">%d Time Stop\n", i);
+					spdlog::debug("Timer stopped");
 					kill(pidLimiter, 9);
 				}
 				else if (chunk[0] == '0')
 				{
-					if (debug) printf(">%d Time Passed\n", i);
+					spdlog::debug("Timeout");
 					grade = 3;
 					kill(pidTester, 9);
 					break;
 				}
 				else if (chunk[0] == '5')
 				{
-					if (debug) printf(">%d Runtime error\n", i);
+					spdlog::debug("Runtime error");
 					grade = 5;
 					kill(pidLimiter, 9);
 					kill(pidTester, 9);
@@ -218,7 +210,7 @@ int grade(const char* problemid, bool debug)
 				}
 				else if (chunk[0] == '6')
 				{
-					if (debug) printf(">%d Test fail\n", i);
+					spdlog::debug("Incorrect output");
 					grade = 6;
 					kill(pidLimiter, 9);
 					kill(pidTester, 9);
@@ -226,25 +218,25 @@ int grade(const char* problemid, bool debug)
 				}
 				else if (chunk[0] == '3')
 				{
-					if (debug) printf(">%d Time limit exceeded\n", i);
+					spdlog::debug("Time limit exceeded");
 					grade = 3;
 					break;
 				}
 				else if (chunk[0] == '4')
 				{
-					if (debug) printf(">%d Memory limit exceeded\n", i);
+					spdlog::debug("Memory limit exceeded");
 					grade = 3;
 					break;
 				}
 				else if (chunk[0] == '7')
 				{
-					if (debug) printf(">%d Correct output\n", i);
+					spdlog::debug("Correct output");
 					if (grade == 0)
 						grade = 7;
 				}
 			}
 
-			if (debug) printf ("> Waiting for tester...\n");
+			spdlog::debug("Waiting for tester");
 			waitpid (pidTester, NULL, 0);
 
 			if (grade == 0)

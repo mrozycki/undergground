@@ -1,3 +1,7 @@
+# Conan
+conan*
+graph_info.json
+
 # CMake
 CMakeFiles
 CMakeCache.txt
