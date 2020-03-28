@@ -3,8 +3,8 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/wait.h>
-#include <sys/prctl.h>  
-#include <mysql/mysql.h>
+#include <sys/prctl.h>
+#include <mysql.h>
 using namespace std;
 
 int main(int argc, char **argv)
@@ -14,7 +14,7 @@ int main(int argc, char **argv)
 	MYSQL_ROW r;
 	FILE *compilation, *judgement;
 	char query[1024];
-	
+
 	setvbuf(stdout, NULL, _IONBF, 0);
 
 	printf ("MySQL init...\t\t\t");
@@ -80,12 +80,12 @@ int main(int argc, char **argv)
 			sprintf (query, "g++ -O2 -Wall solutions/%s -o solution 2>&1", r[2]);
 			printf ("%s\t%s:\tCompiling", r[0], r[2]);
 			compilation = popen (query, "r");
-			if (fgetc(compilation) != -1)	
+			if (fgetc(compilation) != -1)
 			{
 				pclose(compilation);
 
 				printf ("[FAIL]\n");
-				sprintf (query, "UPDATE submissions SET grade='2',checktime=CURRENT_TIMESTAMP WHERE id = '%s';", r[0]);	
+				sprintf (query, "UPDATE submissions SET grade='2',checktime=CURRENT_TIMESTAMP WHERE id = '%s';", r[0]);
 				mysql_real_query(&db, query, strlen(query));
 			}
 			else
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
 
 				judgement = popen(query, "r");
 
-				if (!judgement) 
+				if (!judgement)
 				{
 					printf ("popen fail");
 					continue;
@@ -121,7 +121,7 @@ int main(int argc, char **argv)
 				else
 					printf ("\t\t[FAIL] (%s)\n", chunk);
 
-				sprintf(query, "UPDATE submissions SET grade='%s', checktime=CURRENT_TIMESTAMP WHERE id = '%s';", chunk, r[0]);	
+				sprintf(query, "UPDATE submissions SET grade='%s', checktime=CURRENT_TIMESTAMP WHERE id = '%s';", chunk, r[0]);
 				mysql_real_query(&db, query, strlen(query));
 			}
 

@@ -11,3 +11,4 @@ rules.ninja
 
 # build
 build/**
+bin/**
