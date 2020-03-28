@@ -7,19 +7,25 @@
 #include <mysql.h>
 #include <spdlog/spdlog.h>
 
+#include "compiler.h"
 #include "grader.h"
 
-using namespace std;
+int process_submission(char const* id, char const* problem, char const* submission_file) {
+	spdlog::info("Processing submission request #{}; problem {}", id, problem);
+	auto executable_path = ugg::compile(submission_file);
+	if (!executable_path) {
+		return 2;
+	}
 
-int main(int argc, char **argv)
+	return ugg::grade(problem, *executable_path);
+}
+
+int main()
 {
 	MYSQL db;
 	MYSQL_RES *result;
 	MYSQL_ROW r;
-	FILE *compilation, *judgement;
 	char query[1024];
-
-	setvbuf(stdout, NULL, _IONBF, 0);
 
 	spdlog::info("Starting the grader daemon");
 	spdlog::info("Initializing database");
@@ -55,29 +61,10 @@ int main(int argc, char **argv)
 
 		while ((r = mysql_fetch_row(result)))
 		{
-			spdlog::info("Processing submission request #{}; problem {}", r[0], r[1]);
-			spdlog::info("Compiling file {}", r[2]);
-			sprintf (query, "g++ -O2 -Wall solutions/%s -o solution 2>&1", r[2]);
-			compilation = popen (query, "r");
-			if (fgetc(compilation) != -1)
-			{
-				pclose(compilation);
-				spdlog::info("Compilation failed");
-				spdlog::info("Storing result in database");
-				sprintf (query, "UPDATE submissions SET grade='2',checktime=CURRENT_TIMESTAMP WHERE id = '%s';", r[0]);
-				mysql_real_query(&db, query, strlen(query));
-			}
-			else
-			{
-				pclose(compilation);
-				spdlog::info("Compilation suceeded, running tests");
-				auto grade = ugg::grade(r[1]);
-				spdlog::info("Tests finished; grade: {}", grade);
-				spdlog::info("Storing result in database", grade);
-				sprintf(query, "UPDATE submissions SET grade='%d', checktime=CURRENT_TIMESTAMP WHERE id = '%s';", grade, r[0]);
-				mysql_real_query(&db, query, strlen(query));
-			}
-
+			auto grade = process_submission(r[0], r[1], r[2]);
+			spdlog::info("Storing grade in database");
+			sprintf(query, "UPDATE submissions SET grade='%d', checktime=CURRENT_TIMESTAMP WHERE id = '%s';", grade, r[0]);
+			mysql_real_query(&db, query, strlen(query));
 		}
 
 		sleep(1);

@@ -13,7 +13,7 @@
 using namespace std;
 
 namespace ugg {
-int grade(const char* problemid, bool debug)
+int grade(const char* problemid, std::string const& executable_path)
 {
 	setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -68,7 +68,7 @@ int grade(const char* problemid, bool debug)
 
 				dup2 (inpipe[0], STDIN_FILENO);
 				dup2 (outpipe[1], STDOUT_FILENO);
-				execl ("solution", "solution", NULL);
+				execl (executable_path.c_str(), executable_path.c_str(), NULL);
 				write (cpipe[1], "5", 2);
 				close(cpipe[1]);
 				spdlog::debug("Solution process finished");
@@ -244,12 +244,14 @@ int grade(const char* problemid, bool debug)
 			if (grade != 7)
 			{
 				passed = false;
+				spdlog::info("Test #{} failed, grade: {}", i, grade);
 				return grade + i*8;
 			}
 		}
 	}
 
 	if (passed) {
+		spdlog::info("All tests suceeded, grade: 7");
 		return 7;
 	}
 }

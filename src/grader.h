@@ -1,5 +1,5 @@
 #pragma once
 
 namespace ugg {
-int grade(char const* problem_id, bool debug = false);
+int grade(char const* problem_id, std::string const& executable_path);
 }
