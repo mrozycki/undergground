@@ -29,29 +29,16 @@ int main(int argc, char **argv)
 	}
 
 	printf ("MySQL connect... \t\t");
-	if (argc > 1)
+	if (mysql_real_connect(&db, "127.0.0.1", "grader", "123456", "undergground", 0, NULL, 0))
 	{
-		if (mysql_real_connect(&db, "mysql-966399.vipserv.org", "calki_judge", "h6cMCQJALcHLjNuU", "calki_judge", 0, NULL, 0))
-		{
-			printf ("[ OK ]\n");
-		}
-		else
-		{
-			printf ("[FAIL]\nexiting...\n");
-			return 0;
-		}
+		printf ("[ OK ]\n");
 	}
 	else
 	{
-		if (mysql_real_connect(&db, "localhost", "judge", "h6cMCQJALcHLjNuU", "judge", 0, NULL, 0))
-		{
-			printf ("[ OK ]\n");
-		}
-		else
-		{
-			printf ("[FAIL]\nexiting...\n");
-			return 0;
-		}
+		printf ("[FAIL]\n");
+		printf ("Failed to connect to database: %s\n", mysql_error(&db));
+		printf ("exiting...\n");
+		return 0;
 	}
 
 	while (true)
@@ -72,11 +59,6 @@ int main(int argc, char **argv)
 
 		while ((r = mysql_fetch_row(result)))
 		{
-			if (argc > 1)
-			{
-				sprintf (query, "wget http://undergground.pl/uploads/%s -O solutions/%s -q", r[2], r[2]);
-				system (query);
-			}
 			sprintf (query, "g++ -O2 -Wall solutions/%s -o solution 2>&1", r[2]);
 			printf ("%s\t%s:\tCompiling", r[0], r[2]);
 			compilation = popen (query, "r");
@@ -93,7 +75,7 @@ int main(int argc, char **argv)
 				pclose(compilation);
 
 				printf ("[ OK ] Running ");
-				sprintf (query, "./grader %s", r[1]);
+				sprintf (query, "bin/grader %s", r[1]);
 
 				judgement = popen(query, "r");
 

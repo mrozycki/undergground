@@ -12,3 +12,10 @@ rules.ninja
 # build
 build/**
 bin/**
+
+# SQL
+*.sql
+
+# testing
+solution
+solutions/*
