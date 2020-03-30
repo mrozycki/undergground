@@ -1,16 +1,16 @@
 #pragma once
 
+#include <future>
+
 #include <boost/filesystem.hpp>
 
 #include "file.h"
 
 namespace ugg {
 namespace system {
-namespace {
-enum direction {
-    OUT, IN
+enum class exit_status {
+    SUCCESS, ERROR
 };
-}
 
 class process {
 public:
@@ -22,6 +22,7 @@ public:
     file& err() { return err_; }
 
     bool kill();
+    std::future<exit_status> exit_future();
 
 private:
     pid_t pid_;
@@ -30,7 +31,7 @@ private:
 
 process start_process(
     boost::filesystem::path const& executable,
-    std::vector<std::string_view> arguments,
+    std::vector<std::string_view> arguments = {},
     int memory_limit_value = 134217728,
     int process_limit_value = 1);
 }

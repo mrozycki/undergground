@@ -25,7 +25,7 @@ int process_submission(std::string_view id, std::string_view problem, fs::path s
 		return 2;
 	}
 
-	return ugg::grade(problem, executable_path->native());
+	return ugg::grade(problem, *executable_path);
 }
 
 int main()

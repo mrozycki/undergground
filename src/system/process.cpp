@@ -6,6 +6,7 @@
 #include <spdlog/spdlog.h>
 #include <sys/prctl.h>
 #include <sys/resource.h>
+#include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -19,6 +20,18 @@ bool process::kill() {
     }
 
     return true;
+}
+
+std::future<exit_status> process::exit_future() {
+    return std::async(std::launch::async, [this]() {
+        int status;
+        waitpid(pid_, &status, 0);
+        if (!WIFEXITED(status) || WEXITSTATUS(status)) {
+            return exit_status::ERROR;
+        } else {
+            return exit_status::SUCCESS;
+        }
+    });
 }
 
 namespace {
@@ -38,6 +51,10 @@ char ** build_arguments(boost::filesystem::path const& executable, std::vector<s
     *(next_argument++) = nullptr;
     return native_arguments;
 }
+
+enum direction {
+    OUT, IN
+};
 
 void connect(int pipe[2], int direction, int fd) {
     close(pipe[1 - direction]);
@@ -75,7 +92,7 @@ process start_process(boost::filesystem::path const& executable, std::vector<std
         close(ready_pipe[direction::IN]);
 
         execv(executable.c_str(), build_arguments(executable, arguments));
-        exit(0);
+        exit(-1);
     } else {
         close(stdin_pipe[direction::OUT]);
         close(stdout_pipe[direction::IN]);

@@ -1,24 +1,23 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
-#include <unistd.h>
-#include <sys/wait.h>
-#include <sys/time.h>
-#include <sys/resource.h>
+#include <future>
 #include <sys/prctl.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <spdlog/spdlog.h>
+#include <unistd.h>
 
+#include "system/process.h"
 #include "grader.h"
 
 using namespace std;
 
 namespace ugg {
-int grade(std::string_view problemid, std::string_view executable_path)
+int grade(std::string_view problemid, boost::filesystem::path const& executable_path)
 {
-	setvbuf(stdout, NULL, _IONBF, 0);
-
-	bool passed = true;
-
 	char testpath[32];
 	sprintf(testpath, "problems/%s/tests", problemid.data());
 	FILE *testfile = fopen(testpath, "r");
@@ -30,6 +29,7 @@ int grade(std::string_view problemid, std::string_view executable_path)
 	int testnum;
 	fscanf(testfile, "%d", &testnum);
 
+	bool passed = true;
 	for (int i = 1; i <= testnum; i++)
 	{
 		spdlog::info("Running test {}/{}", i, testnum);
@@ -41,218 +41,122 @@ int grade(std::string_view problemid, std::string_view executable_path)
 		fscanf(testfile, "%d %d", &maxmem, &maxtime);
 		spdlog::debug("Test details: inpath={}, outpath={}, maxmem={}, maxtime={}", inpath, outpath, maxmem, maxtime);
 
-		pid_t pidSolution, pidTester, pidLimiter, pidSender, pidReceiver;
-		int cpipe[2]; pipe(cpipe);
+		int event_pipe[2];
+		pipe(event_pipe);
 
-		pidTester = fork();
-		if (!pidTester)
-		{
-			close (cpipe[0]);
-			int inpipe[2], outpipe[2];
-			pipe(inpipe);
-			pipe(outpipe);
+		auto tester = std::async(std::launch::async, [executable_path, inpath, outpath, event_pipe, maxmem, maxtime] {
+			auto solution_process = ugg::system::start_process(executable_path);
 
-			pidSolution = fork();
-			if (!pidSolution)
-			{
-				spdlog::debug("Starting solution process");
-				prctl(PR_SET_PDEATHSIG, 9);
-				struct rlimit memlimit, proclimit;
-				memlimit.rlim_cur = 128*1024*1024;
-				memlimit.rlim_max = -1;
-				setrlimit (RLIMIT_STACK, &memlimit);
-
-				proclimit.rlim_cur = 1;
-				proclimit.rlim_max = 1;
-				setrlimit (RLIMIT_NPROC, &proclimit);
-
-				dup2 (inpipe[0], STDIN_FILENO);
-				dup2 (outpipe[1], STDOUT_FILENO);
-				execl (executable_path.data(), executable_path.data(), NULL);
-				write (cpipe[1], "5", 2);
-				close(cpipe[1]);
-				spdlog::debug("Solution process finished");
-				exit(0);
-			}
-			close(outpipe[1]);
-
-			pidSender = fork();
-			if (!pidSender)
-			{
-				spdlog::debug("Starting input sender process");
+			auto sender = std::async(std::launch::async, [&solution_process, inpath] {
+				spdlog::info("Starting input sender");
 				FILE *indata = fopen(inpath, "r");
 				char instr[32];
-				int k = 0;
 				while (fscanf(indata, "%s", instr) != -1)
 				{
-					write (inpipe[1], instr, strlen(instr));
-					write (inpipe[1], "\n", 1);
+					spdlog::info("writing: {}", instr);
+					solution_process.in().printf("%s\n", instr);
 				}
-				write (inpipe[1], "", 1);
-				close(inpipe[1]);
 				fclose(indata);
-				close(cpipe[1]);
-				spdlog::debug("Input sender process finished");
-				exit(0);
-			}
+				spdlog::info("Input sender finished");
+			});
 
-			pidReceiver = fork();
-			if (!pidReceiver)
-			{
-				spdlog::debug("Starting output receiver process");
+			auto receiver = std::async(std::launch::async, [&solution_process, outpath, event_pipe] {
+				spdlog::info("Starting output receiver");
 				char outstr[32], ansstr[32];
 				FILE *outdata = fopen(outpath, "r");
-				FILE *answer = fdopen(outpipe[0], "r");
+				auto answer = solution_process.out();
 
-				while (fscanf(answer, "%s", ansstr) != -1
-						&& fscanf(outdata, "%s", outstr) != -1)
-				{
-					if (strcmp(ansstr, outstr))
-					{
-						write(cpipe[1], "6", 2);
+				while (answer.scanf("%s", ansstr) != -1 && fscanf(outdata, "%s", outstr) != -1) {
+					spdlog::info("received: {} (expected: {})", ansstr, outstr);
+					if (strcmp(ansstr, outstr)) {
+						write(event_pipe[1], "6", 1);
 						break;
 					}
 				}
 
-				if (fscanf(answer, "%s", ansstr) != -1
-						|| fscanf(outdata, "%s", outstr) != -1)
-				{
-					write(cpipe[1], "6", 2);
-				}
-				else
-				{
-					write(cpipe[1], "7", 1);
+				if (answer.scanf("%s", ansstr) != -1 || fscanf(outdata, "%s", outstr) != -1) {
+					write(event_pipe[1], "6", 1);
+				} else {
+					write(event_pipe[1], "7", 1);
 				}
 
-				fclose(answer);
 				fclose(outdata);
-				close(cpipe[1]);
-				spdlog::debug("Output receiver process finished");
-				exit(0);
-			}
+				spdlog::info("Output receiver finished");
+			});
 
-			// wait
-			write (cpipe[1], "8", 1);
-			waitpid (pidSolution, NULL, 0);
-			write (cpipe[1], "9", 1);
-			kill (pidSender, 9);
+			spdlog::info("Starting timer");
+			auto solution_future = solution_process.exit_future();
+			if (solution_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
+				write(event_pipe[1], "0", 1);
+			} else if (solution_future.get() != system::exit_status::SUCCESS) {
+				write(event_pipe[1], "5", 1);
+			}
+			sender.wait();
+			receiver.wait();
 
 			// check the resource usage
-			struct rusage usage;
+			rusage usage;
 			getrusage(RUSAGE_CHILDREN, &usage);
 			long tusage = (usage.ru_utime.tv_sec+usage.ru_stime.tv_sec)*1000 + (usage.ru_utime.tv_usec+usage.ru_stime.tv_usec)/1000;
 			spdlog::info("Memory usage: {}/{}kb", usage.ru_maxrss, maxmem);
 			spdlog::info("Time taken: {}/{}ms", tusage, maxtime);
 
-			if (usage.ru_maxrss > maxmem)
-			{
-				write (cpipe[1], "4", 2);
-			}
-			else if (usage.ru_maxrss < 900)
-			{
-				write (cpipe[1], "5", 2);
+			if (usage.ru_maxrss > maxmem) {
+				write(event_pipe[1], "4", 1);
+			} else if (usage.ru_maxrss < 900) {
+				write(event_pipe[1], "5", 1);
 			}
 
-			if (tusage > maxtime)
-			{
-				write (cpipe[1], "3", 2);
+			if (tusage > maxtime) {
+				write (event_pipe[1], "3", 1);
 			}
-			close(cpipe[1]);
-			spdlog::debug("Tester finished");
-			exit(0);
+			close(event_pipe[1]);
+		});
+
+		int grade = 0;
+		char event;
+		spdlog::info("Waiting for events");
+		while (read(event_pipe[0], &event, 1)) {
+			if (event == '0') {
+				spdlog::info("Timeout");
+				grade = 3;
+				break;
+			} else if (event == '5') {
+				spdlog::info("Runtime error");
+				grade = 5;
+				break;
+			} else if (event == '6') {
+				spdlog::info("Incorrect output");
+				grade = 6;
+				break;
+			} else if (event == '3') {
+				spdlog::info("Time limit exceeded");
+				grade = 3;
+				break;
+			} else if (event == '4') {
+				spdlog::info("Memory limit exceeded");
+				grade = 3;
+				break;
+			} else if (event == '7') {
+				spdlog::info("Correct output");
+				if (grade == 0)
+					grade = 7;
+			} else {
+				spdlog::warn("Unkown event: {}", event);
+			}
 		}
-		else
-		{
-			char chunk[32];
-			while (read (cpipe[0], chunk, 32))
-			{
-				if (chunk[0] == '8')
-				{
-					spdlog::debug("Starting timer");
-					break;
-				}
-			}
 
-			pidLimiter = fork();
-			if (!pidLimiter)
-			{
-				close(cpipe[0]);
-				usleep(1000*10000);
-				write(cpipe[1], "0", 10);
-				close(cpipe[1]);
-				exit(0);
-			}
+		spdlog::info("Waiting for tester");
+		tester.wait();
 
-			int grade = 0;
-
-			close(cpipe[1]);
-			while (read (cpipe[0], chunk, 1))
-			{
-				if (chunk[0] == '9')
-				{
-					spdlog::debug("Timer stopped");
-					kill(pidLimiter, 9);
-				}
-				else if (chunk[0] == '0')
-				{
-					spdlog::debug("Timeout");
-					grade = 3;
-					kill(pidTester, 9);
-					break;
-				}
-				else if (chunk[0] == '5')
-				{
-					spdlog::debug("Runtime error");
-					grade = 5;
-					kill(pidLimiter, 9);
-					kill(pidTester, 9);
-					break;
-				}
-				else if (chunk[0] == '6')
-				{
-					spdlog::debug("Incorrect output");
-					grade = 6;
-					kill(pidLimiter, 9);
-					kill(pidTester, 9);
-					break;
-				}
-				else if (chunk[0] == '3')
-				{
-					spdlog::debug("Time limit exceeded");
-					grade = 3;
-					break;
-				}
-				else if (chunk[0] == '4')
-				{
-					spdlog::debug("Memory limit exceeded");
-					grade = 3;
-					break;
-				}
-				else if (chunk[0] == '7')
-				{
-					spdlog::debug("Correct output");
-					if (grade == 0)
-						grade = 7;
-				}
-			}
-
-			spdlog::debug("Waiting for tester");
-			waitpid (pidTester, NULL, 0);
-
-			if (grade == 0)
-				continue;
-			if (grade != 7)
-			{
-				passed = false;
-				spdlog::info("Test #{} failed, grade: {}", i, grade);
-				return grade + i*8;
-			}
+		if (grade != 7) {
+			passed = false;
+			spdlog::info("Test #{} failed, grade: {}", i, grade);
+			return grade + i*8;
 		}
 	}
 
-	if (passed) {
-		spdlog::info("All tests suceeded, grade: 7");
-		return 7;
-	}
+	spdlog::info("All tests suceeded, grade: 7");
+	return 7;
 }
 }
