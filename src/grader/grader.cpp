@@ -2,7 +2,6 @@
 
 #include <cstring>
 #include <future>
-#include <sys/resource.h>
 #include <sys/time.h>
 #include <spdlog/spdlog.h>
 
@@ -76,55 +75,50 @@ int grade(std::string_view problem_id, fs::path const& executable_path) {
 				spdlog::info("Input sender finished");
 			});
 
-			auto receiver = std::async(std::launch::async, [&solution_process, test] {
-				spdlog::info("Starting output receiver");
+			auto output_verifier = std::async(std::launch::async, [&solution_process, test] {
+				spdlog::info("Starting output verifier");
 				auto outdata = system::file(test.output_path);
 				auto answer = solution_process.out();
 				char outstr[32], ansstr[32];
 				while (answer.scanf("%s", ansstr) != -1 && outdata.scanf("%s", outstr) != -1) {
 					if (strcmp(ansstr, outstr)) {
-						return INCORRECT;
+						return false;
 					}
 				}
 
 				if (answer.scanf("%s", ansstr) != -1 || outdata.scanf("%s", outstr) != -1) {
-					return INCORRECT;
+					return false;
 				} else {
-					return CORRECT;
+					return true;
 				}
 			});
 
-			auto grade = [&solution_process] {
+			auto status_grade = [&solution_process, &test] {
 				auto solution_future = solution_process.exit_future();
 				if (solution_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
 					solution_process.kill();
 					return TIMEOUT;
-				} else if (solution_future.get() != system::exit_status::SUCCESS) {
+				}
+
+				auto solution_status = solution_future.get();
+				if (solution_status.exit_status != system::exit_status::success) {
 					return RUNTIME_ERROR;
+				} else if (solution_status.time_taken > test.time_limit) {
+					return TIME_EXCEEDED;
+				} else if (solution_status.memory_usage > test.memory_limit) {
+					return MEMORY_EXCEEDED;
 				} else {
 					return CORRECT;
 				}
 			}();
 
 			sender.wait();
-			receiver.wait();
+			output_verifier.wait();
 
-			rusage usage;
-			getrusage(RUSAGE_CHILDREN, &usage);
-			long tusage = (usage.ru_utime.tv_sec+usage.ru_stime.tv_sec)*1000 + (usage.ru_utime.tv_usec+usage.ru_stime.tv_usec)/1000;
-			spdlog::info("Memory usage: {}/{}kb", usage.ru_maxrss, test.memory_limit);
-			spdlog::info("Time taken: {}/{}ms", tusage, test.time_limit);
-
-			if (receiver.get() == INCORRECT) {
+			if (!output_verifier.get()) {
 				return INCORRECT;
-			} else if (grade != CORRECT) {
-				return grade;
-			} else if (usage.ru_maxrss > test.memory_limit) {
-				return MEMORY_EXCEEDED;
-			} else if (tusage > test.time_limit) {
-				return TIME_EXCEEDED;
 			} else {
-				return CORRECT;
+				return status_grade;
 			}
 		}();
 

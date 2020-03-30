@@ -9,7 +9,14 @@
 namespace ugg {
 namespace system {
 enum class exit_status {
-    SUCCESS, ERROR
+    success, error, terminated
+};
+
+struct process_result {
+    int memory_usage;
+    int time_taken;
+    exit_status exit_status;
+    int exit_code;
 };
 
 class process {
@@ -22,7 +29,7 @@ public:
     file& err() { return err_; }
 
     bool kill();
-    std::future<exit_status> exit_future();
+    std::future<process_result> exit_future();
 
 private:
     pid_t pid_;

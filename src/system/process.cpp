@@ -22,15 +22,30 @@ bool process::kill() {
     return true;
 }
 
-std::future<exit_status> process::exit_future() {
+std::future<process_result> process::exit_future() {
     return std::async(std::launch::async, [this]() {
+        process_result result;
+
         int status;
         waitpid(pid_, &status, 0);
-        if (!WIFEXITED(status) || WEXITSTATUS(status)) {
-            return exit_status::ERROR;
+        if (WIFEXITED(status)) {
+            result.exit_code = WEXITSTATUS(status);
+            result.exit_status = result.exit_code ? exit_status::error : exit_status::success;
+        } else if (WIFSIGNALED(status)) {
+            result.exit_code = WTERMSIG(status);
+            result.exit_status = exit_status::terminated;
         } else {
-            return exit_status::SUCCESS;
+            result.exit_code = 0;
+            result.exit_status = exit_status::error;
         }
+
+        rusage usage;
+        getrusage(RUSAGE_CHILDREN, &usage);
+		result.time_taken = (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000
+            + (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000;
+        result.memory_usage = usage.ru_maxrss;
+
+        return result;
     });
 }
 
