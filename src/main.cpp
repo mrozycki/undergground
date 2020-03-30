@@ -6,9 +6,9 @@
 #include <spdlog/spdlog.h>
 #include <spdlog/sinks/basic_file_sink.h>
 
-#include "compiler.h"
+#include "grader/compiler.h"
+#include "grader/grader.h"
 #include "database.h"
-#include "grader.h"
 
 namespace fs = boost::filesystem;
 

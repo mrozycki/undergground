@@ -1,3 +1,5 @@
+#include "grader.h"
+
 #include <cstring>
 #include <future>
 #include <sys/resource.h>
@@ -5,7 +7,6 @@
 #include <spdlog/spdlog.h>
 
 #include "system/process.h"
-#include "grader.h"
 
 namespace fs = boost::filesystem;
 
