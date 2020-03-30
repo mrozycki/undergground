@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 
+#include <boost/filesystem.hpp>
+
 namespace ugg {
-std::optional<std::string> compile(std::string_view source_file);
+std::optional<boost::filesystem::path> compile(boost::filesystem::path source_file);
 }

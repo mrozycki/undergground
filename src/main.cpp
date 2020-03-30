@@ -4,10 +4,13 @@
 
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
+#include <spdlog/sinks/basic_file_sink.h>
 
 #include "compiler.h"
 #include "database.h"
 #include "grader.h"
+
+namespace fs = boost::filesystem;
 
 bool keep_going = true;
 void signal_handler(int signum) {
@@ -15,14 +18,14 @@ void signal_handler(int signum) {
 	keep_going = false;
 }
 
-int process_submission(std::string_view id, std::string_view problem, std::string_view submission_file) {
+int process_submission(std::string_view id, std::string_view problem, fs::path submission_file) {
 	spdlog::info("Processing submission request #{}; problem {}", id, problem);
-	auto executable_path = ugg::compile(submission_file);
+	auto executable_path = ugg::compile(fs::path("solutions") / submission_file);
 	if (!executable_path) {
 		return 2;
 	}
 
-	return ugg::grade(problem, *executable_path);
+	return ugg::grade(problem, executable_path->native());
 }
 
 int main()
@@ -44,7 +47,7 @@ try {
 
 		while (auto row = result.next_row())
 		{
-			auto grade = process_submission((*row)[0], (*row)[1], (*row)[2]);
+			auto grade = process_submission((*row)[0], (*row)[1], fs::path((*row)[2].data()));
 			spdlog::info("Storing grade in database");
 			db.query(fmt::format(R"(
 				UPDATE submissions
