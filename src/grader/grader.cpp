@@ -78,7 +78,7 @@ int grade(std::string_view problem_id, fs::path const& executable_path) {
 			auto output_verifier = std::async(std::launch::async, [&solution_process, test] {
 				spdlog::info("Starting output verifier");
 				auto outdata = system::file(test.output_path);
-				auto answer = solution_process.out();
+				auto& answer = solution_process.out();
 				char outstr[32], ansstr[32];
 				while (answer.scanf("%s", ansstr) != -1 && outdata.scanf("%s", outstr) != -1) {
 					if (strcmp(ansstr, outstr)) {

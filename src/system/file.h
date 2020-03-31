@@ -12,8 +12,21 @@ public:
     file(boost::filesystem::path const& path, std::string_view mode = "r")
         : file_(fopen(path.c_str(), mode.data())) { }
 
+    file(file const&) = delete;
+    file& operator=(file const&) = delete;
+
+    file(file&& other) : file_(nullptr) {
+        std::swap(file_, other.file_);
+    }
+
+    file& operator=(file&& other) {
+        file_ = nullptr;
+        std::swap(file_, other.file_);
+        return *this;
+    }
+
     ~file() {
-        // fclose(file_);
+        fclose(file_);
     }
 
     template<typename FormatString, typename ...Args>
