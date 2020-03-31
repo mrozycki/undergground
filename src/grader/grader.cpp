@@ -2,10 +2,10 @@
 
 #include <cstring>
 #include <future>
-#include <sys/time.h>
 #include <spdlog/spdlog.h>
 
 #include "system/process.h"
+#include "io_handler.h"
 #include "test_loader.h"
 
 namespace fs = boost::filesystem;
@@ -35,34 +35,9 @@ int grade(std::string_view problem_id, fs::path const& executable_path) {
 		spdlog::info("Running test {}/{}", test.id, tests.size());
 		auto const final_grade = [executable_path, test] {
 			auto solution_process = ugg::system::start_process(executable_path);
-
-			auto sender = std::async(std::launch::async, [&solution_process, test] {
-				spdlog::info("Starting input sender");
-				auto indata = system::file(test.input_path);
-				char instr[32];
-				while (indata.scanf("%s", instr) != -1) {
-					solution_process.in().printf("%s\n", instr);
-				}
-				spdlog::info("Input sender finished");
-			});
-
-			auto output_verifier = std::async(std::launch::async, [&solution_process, test] {
-				spdlog::info("Starting output verifier");
-				auto outdata = system::file(test.output_path);
-				auto& answer = solution_process.out();
-				char outstr[32], ansstr[32];
-				while (answer.scanf("%s", ansstr) != -1 && outdata.scanf("%s", outstr) != -1) {
-					if (strcmp(ansstr, outstr)) {
-						return false;
-					}
-				}
-
-				if (answer.scanf("%s", ansstr) != -1 || outdata.scanf("%s", outstr) != -1) {
-					return false;
-				} else {
-					return true;
-				}
-			});
+			auto io_handler = ugg::io_handler(solution_process);
+			auto sender = io_handler.feed(test.input_path);
+			auto output_verifier = io_handler.verify_output(test.output_path);
 
 			auto solution_future = solution_process.exit_future();
 			if (solution_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
