@@ -93,32 +93,26 @@ int grade(std::string_view problem_id, fs::path const& executable_path) {
 				}
 			});
 
-			auto status_grade = [&solution_process, &test] {
-				auto solution_future = solution_process.exit_future();
-				if (solution_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
-					solution_process.kill();
-					return TIMEOUT;
-				}
-
-				auto solution_status = solution_future.get();
-				if (solution_status.exit_status != system::exit_status::success) {
-					return RUNTIME_ERROR;
-				} else if (solution_status.time_taken > test.time_limit) {
-					return TIME_EXCEEDED;
-				} else if (solution_status.memory_usage > test.memory_limit) {
-					return MEMORY_EXCEEDED;
-				} else {
-					return CORRECT;
-				}
-			}();
+			auto solution_future = solution_process.exit_future();
+			if (solution_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
+				solution_process.kill();
+				return TIMEOUT;
+			}
 
 			sender.wait();
 			output_verifier.wait();
 
 			if (!output_verifier.get()) {
 				return INCORRECT;
+			} else if (auto solution_status = solution_future.get();
+					solution_status.exit_status != system::exit_status::success) {
+				return RUNTIME_ERROR;
+			} else if (solution_status.time_taken > test.time_limit) {
+				return TIME_EXCEEDED;
+			} else if (solution_status.memory_usage > test.memory_limit) {
+				return MEMORY_EXCEEDED;
 			} else {
-				return status_grade;
+				return CORRECT;
 			}
 		}();
 
