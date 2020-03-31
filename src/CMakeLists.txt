@@ -1,6 +1,7 @@
 add_executable(undergground
     grader/compiler.cpp
     grader/grader.cpp
+    grader/test_loader.cpp
     system/process.cpp
     database.cpp
     main.cpp
