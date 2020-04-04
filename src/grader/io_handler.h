@@ -17,4 +17,4 @@ public:
 private:
     system::process& solution_process_;
 };
-}
+} // namespace ugg

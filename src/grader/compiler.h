@@ -16,4 +16,4 @@ public:
 private:
     boost::filesystem::path compiler_path_;
 };
-}
+} // namespace ugg

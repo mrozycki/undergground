@@ -9,9 +9,7 @@
 
 namespace ugg {
 namespace system {
-enum class exit_status {
-    success, error, terminated
-};
+enum class exit_status { success, error, terminated };
 
 struct process_result {
     long memory_usage;
@@ -42,5 +40,5 @@ process start_process(
     std::vector<std::string_view> arguments = {},
     rlim_t memory_limit_value = 134217728,
     rlim_t process_limit_value = 1);
-}
-}
+} // namespace system
+} // namespace ugg

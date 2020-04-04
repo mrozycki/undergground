@@ -16,19 +16,14 @@ std::optional<row> result::next_row() {
 }
 
 connection::connection(
-        std::string_view hostname,
-        std::string_view username,
-        std::string_view password,
-        std::string_view name) {
+    std::string_view hostname, std::string_view username, std::string_view password, std::string_view name) {
     if (!mysql_init(&mysql)) {
-        throw std::runtime_error(
-            fmt::format("Failed to initialize database: {}", mysql_error(&mysql)));
+        throw std::runtime_error(fmt::format("Failed to initialize database: {}", mysql_error(&mysql)));
     }
 
     spdlog::info("Connecting to database at '{}'", hostname);
     if (!mysql_real_connect(&mysql, hostname.data(), username.data(), password.data(), name.data(), 0, NULL, 0)) {
-        throw std::runtime_error(
-            fmt::format("Failed to connect to database: {}", mysql_error(&mysql)));
+        throw std::runtime_error(fmt::format("Failed to connect to database: {}", mysql_error(&mysql)));
     }
 }
 
@@ -40,10 +35,9 @@ connection::~connection() {
 result connection::query(std::string_view query) {
     spdlog::debug("Database query: {}", query);
     if (mysql_real_query(&mysql, query.data(), query.size())) {
-        throw std::runtime_error(
-            fmt::format("Database query failed: ", mysql_error(&mysql)));
+        throw std::runtime_error(fmt::format("Database query failed: ", mysql_error(&mysql)));
     }
     return result(mysql_store_result(&mysql));
 }
-}
-}
+} // namespace db
+} // namespace ugg

@@ -33,11 +33,7 @@ private:
 
 class connection {
 public:
-    connection(
-        std::string_view hostname,
-        std::string_view username,
-        std::string_view password,
-        std::string_view name);
+    connection(std::string_view hostname, std::string_view username, std::string_view password, std::string_view name);
 
     ~connection();
 
@@ -46,5 +42,5 @@ public:
 private:
     MYSQL mysql;
 };
-}
-}
+} // namespace db
+} // namespace ugg

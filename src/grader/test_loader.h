@@ -4,11 +4,11 @@
 
 namespace ugg {
 struct test {
-	std::size_t id;
-	boost::filesystem::path input_path;
-	boost::filesystem::path output_path;
-	int memory_limit;
-	int time_limit;
+    std::size_t id;
+    boost::filesystem::path input_path;
+    boost::filesystem::path output_path;
+    int memory_limit;
+    int time_limit;
 };
 
 class test_loader {
@@ -20,4 +20,4 @@ public:
 private:
     boost::filesystem::path data_path_;
 };
-}
+} // namespace ugg

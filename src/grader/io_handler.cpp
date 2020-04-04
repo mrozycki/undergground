@@ -36,4 +36,4 @@ std::future<bool> io_handler::verify_output(boost::filesystem::path const& outpu
         }
     });
 }
-}
+} // namespace ugg

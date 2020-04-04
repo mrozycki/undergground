@@ -3,10 +3,10 @@
 #include <csignal>
 
 #include <boost/algorithm/string.hpp>
+#include <fcntl.h>
 #include <spdlog/spdlog.h>
 #include <sys/prctl.h>
 #include <sys/wait.h>
-#include <fcntl.h>
 #include <unistd.h>
 
 namespace ugg {
@@ -40,8 +40,8 @@ std::future<process_result> process::exit_future() {
 
         rusage usage;
         getrusage(RUSAGE_CHILDREN, &usage);
-		result.time_taken = (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000
-            + (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000;
+        result.time_taken = (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000 +
+            (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000;
         result.memory_usage = usage.ru_maxrss;
 
         return result;
@@ -49,14 +49,14 @@ std::future<process_result> process::exit_future() {
 }
 
 namespace {
-char * copy(char const *const s) {
-    char * result = new char[strlen(s) + 1];
+char* copy(char const* const s) {
+    char* result = new char[strlen(s) + 1];
     strcpy(result, s);
     return result;
 }
 
-char ** build_arguments(boost::filesystem::path const& executable, std::vector<std::string_view> const& arguments) {
-    char ** native_arguments = new char*[arguments.size() + 2];
+char** build_arguments(boost::filesystem::path const& executable, std::vector<std::string_view> const& arguments) {
+    char** native_arguments = new char*[arguments.size() + 2];
     auto next_argument = native_arguments;
     *(next_argument++) = copy(executable.filename().c_str());
     for (auto const& argument : arguments) {
@@ -66,17 +66,19 @@ char ** build_arguments(boost::filesystem::path const& executable, std::vector<s
     return native_arguments;
 }
 
-enum direction {
-    OUT, IN
-};
+enum direction { OUT, IN };
 
 void connect(int pipe[2], int direction, int fd) {
     close(pipe[1 - direction]);
     dup2(pipe[direction], fd);
 }
-}
+} // namespace
 
-process start_process(boost::filesystem::path const& executable, std::vector<std::string_view> arguments, rlim_t memory_limit_value, rlim_t process_limit_value) {
+process start_process(
+    boost::filesystem::path const& executable,
+    std::vector<std::string_view> arguments,
+    rlim_t memory_limit_value,
+    rlim_t process_limit_value) {
     int stdin_pipe[2], stdout_pipe[2], stderr_pipe[2], ready_pipe[2];
     ::pipe(stdin_pipe);
     ::pipe(stdout_pipe);
@@ -123,5 +125,5 @@ process start_process(boost::filesystem::path const& executable, std::vector<std
     }
 }
 
-}
-}
+} // namespace system
+} // namespace ugg
