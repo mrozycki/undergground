@@ -1,8 +1,16 @@
+# CLion
+.idea
+
 # Conan
-conan*
-graph_info.json
+/conan.cmake
+/conan.lock
+/conanbuildinfo.cmake
+/conanbuildinfo.txt
+/conaninfo.txt
+/graph_info.json
 
 # CMake
+.cmake
 CMakeFiles
 CMakeCache.txt
 cmake_install.cmake
