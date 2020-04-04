@@ -24,6 +24,7 @@ rules.ninja
 # build
 build/**
 bin/**
+lib/**
 
 # SQL
 *.sql

@@ -1,4 +1,4 @@
-#include "test_loader.h"
+#include "grader/test_loader.h"
 
 namespace ugg {
 std::vector<test> test_loader::load_tests(std::string_view problem_id) const {
