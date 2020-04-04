@@ -19,13 +19,19 @@ std::optional<boost::filesystem::path> compiler::compile(boost::filesystem::path
     auto compiler_process =
         ugg::system::start_process(compiler_path_, {"-O2", "-Wall", source_file.c_str(), "-o", output_path.c_str()});
 
-    if (compiler_process.err().getc() == EOF) {
-        spdlog::info("Compilation suceeded");
-        return {output_path};
-    } else {
-        spdlog::info("Compilation failed");
+    auto compiler_future = compiler_process.exit_future();
+    if (compiler_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
+        spdlog::error("Compilator did not finish in 10s, killing");
         compiler_process.kill();
         return {};
     }
+
+    if (compiler_future.get().exit_status != system::exit_status::success) {
+        spdlog::info("Compilation failed");
+        return {};
+    }
+
+    spdlog::info("Compilation succeeded");
+    return {output_path};
 }
 } // namespace ugg

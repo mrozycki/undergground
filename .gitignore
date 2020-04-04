@@ -15,6 +15,13 @@ CMakeFiles
 CMakeCache.txt
 cmake_install.cmake
 
+# CTest
+CTestTestfile.cmake
+tests_include*
+tests_tests*
+tests.xml
+Testing/**
+
 # Ninja
 .ninja_deps
 .ninja_log

@@ -21,6 +21,7 @@ conan_cmake_run(
   REQUIRES
   ${CONAN_EXTRA_REQUIRES}
   boost/1.72.0
+  catch2/2.11.3
   fmt/6.1.2
   spdlog/1.5.0
   zlib/1.2.11
