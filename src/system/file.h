@@ -29,18 +29,12 @@ public:
         fclose(file_);
     }
 
-    template<typename FormatString, typename ...Args>
-    int printf(FormatString const& format, Args const&... args) {
-        return fprintf(file_, format, args...);
+    FILE* get() const {
+        return file_;
     }
 
-    template<typename FormatString, typename ...Args>
-    int scanf(FormatString const& format, Args&&... args) {
-        return fscanf(file_, format, std::forward<Args>(args)...);
-    }
-
-    int getc() {
-        int c;
+    char getc() {
+        char c;
         if (scanf("%c", &c) < 0) {
             return -1;
         } else {

@@ -7,6 +7,7 @@ set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 set(CONAN_EXTRA_REQUIRES "mysql-connector-c/6.1.11@bincrafters/stable")
 
+include(cmake/CompilerWarnings.cmake)
 include(cmake/Conan.cmake)
 run_conan()
 

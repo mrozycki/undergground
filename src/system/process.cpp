@@ -5,7 +5,6 @@
 #include <boost/algorithm/string.hpp>
 #include <spdlog/spdlog.h>
 #include <sys/prctl.h>
-#include <sys/resource.h>
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -77,7 +76,7 @@ void connect(int pipe[2], int direction, int fd) {
 }
 }
 
-process start_process(boost::filesystem::path const& executable, std::vector<std::string_view> arguments, int memory_limit_value, int process_limit_value) {
+process start_process(boost::filesystem::path const& executable, std::vector<std::string_view> arguments, rlim_t memory_limit_value, rlim_t process_limit_value) {
     int stdin_pipe[2], stdout_pipe[2], stderr_pipe[2], ready_pipe[2];
     ::pipe(stdin_pipe);
     ::pipe(stdout_pipe);
@@ -95,8 +94,8 @@ process start_process(boost::filesystem::path const& executable, std::vector<std
         setrlimit(RLIMIT_STACK, &memory_limit);
 
         rlimit process_limit;
-        process_limit.rlim_cur = 1;
-        process_limit.rlim_max = 1;
+        process_limit.rlim_cur = process_limit_value;
+        process_limit.rlim_max = process_limit_value;
         setrlimit(RLIMIT_NPROC, &process_limit);
 
         connect(stdin_pipe, direction::OUT, STDIN_FILENO);

@@ -13,7 +13,7 @@ std::vector<test> test_loader::load_tests(std::string_view problem_id) const {
 
 	std::vector<test> tests;
 	tests.reserve(test_count);
-	for (auto i = 0; i < test_count; i++) {
+	for (std::size_t i = 0; i < test_count; i++) {
 		auto& test = tests.emplace_back();
 		test.id = i+1;
 		std::string input_filename, output_filename;

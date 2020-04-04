@@ -10,8 +10,8 @@ std::future<void> io_handler::feed(boost::filesystem::path const& input_path) {
         spdlog::info("Starting input sender");
         auto input_file = system::file(input_path);
         char input_chunk[32];
-        while (input_file.scanf("%s", input_chunk) != -1) {
-            solution_process_.in().printf("%s\n", input_chunk);
+        while (fscanf(input_file.get(), "%s", input_chunk) != -1) {
+            fprintf(solution_process_.in().get(), "%s\n", input_chunk);
         }
         spdlog::info("Input sender finished");
     });
@@ -23,13 +23,13 @@ std::future<bool> io_handler::verify_output(boost::filesystem::path const& outpu
         auto expected = system::file(output_path);
         auto& actual = solution_process_.out();
         char expected_chunk[32], actual_chunk[32];
-        while (actual.scanf("%s", actual_chunk) != -1 && expected.scanf("%s", expected_chunk) != -1) {
+        while (fscanf(actual.get(), "%s", actual_chunk) != -1 && fscanf(expected.get(), "%s", expected_chunk) != -1) {
             if (strcmp(actual_chunk, expected_chunk)) {
                 return false;
             }
         }
 
-        if (actual.scanf("%s", actual_chunk) != -1 || expected.scanf("%s", expected_chunk) != -1) {
+        if (fscanf(actual.get(), "%s", actual_chunk) != -1 || fscanf(expected.get(), "%s", expected_chunk) != -1) {
             return false;
         } else {
             return true;

@@ -8,6 +8,8 @@ add_executable(undergground
     main.cpp
 )
 
+set_project_warnings(undergground)
+
 target_link_libraries(undergground PUBLIC
     CONAN_PKG::fmt
     CONAN_PKG::spdlog

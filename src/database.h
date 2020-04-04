@@ -23,7 +23,7 @@ public:
     result(std::unique_ptr<MYSQL_RES> result) : result_(std::move(result)) {}
     result(MYSQL_RES* result) : result_(result) {}
 
-    operator bool() const { return (bool)result_; }
+    operator bool() const { return result_ != nullptr; }
 
     std::optional<row> next_row();
 

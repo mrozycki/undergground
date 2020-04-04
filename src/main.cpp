@@ -13,8 +13,12 @@ namespace fs = boost::filesystem;
 
 bool keep_going = true;
 void signal_handler(int signum) {
-	spdlog::info("Received kill signal");
-	keep_going = false;
+	if (signum == SIGKILL) {
+		spdlog::info("Received kill signal");
+		keep_going = false;
+	} else {
+		spdlog::info("Received signal: {}", signum);
+	}
 }
 
 int main()
@@ -38,13 +42,13 @@ try {
 		while (auto row = result.next_row())
 		{
 			spdlog::info("Processing submission #{}, problem {}", (*row)[0], (*row)[1]);
-			auto result = grader.grade((*row)[1], fs::path("solutions") / (*row)[2].data());
-			spdlog::info("Submission #{}, grade {}", (*row)[0], static_cast<int>(result.overall_grade));
+			auto grader_result = grader.grade((*row)[1], fs::path("solutions") / (*row)[2].data());
+			spdlog::info("Submission #{}, grade {}", (*row)[0], static_cast<int>(grader_result.overall_grade));
 			db.query(fmt::format(R"(
 				UPDATE submissions
 				SET grade = '{}', checktime = CURRENT_TIMESTAMP
 				WHERE id = '{}'
-			)", static_cast<int>(result.overall_grade), (*row)[0]));
+			)", static_cast<int>(grader_result.overall_grade), (*row)[0]));
 		}
 
 		std::this_thread::sleep_for(std::chrono::seconds(1));
