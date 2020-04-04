@@ -8,6 +8,7 @@
 #include <boost/filesystem.hpp>
 
 #include "test_loader.h"
+#include "compiler.h"
 
 namespace ugg {
 enum class grade {
@@ -33,12 +34,18 @@ struct grader_result {
 
 class grader {
 public:
-    explicit grader(std::unique_ptr<test_loader> test_loader) : test_loader_(std::move(test_loader)) {}
-    grader() : grader(std::make_unique<test_loader>(boost::filesystem::path("problems"))) {}
+    explicit grader(std::unique_ptr<test_loader> test_loader, std::unique_ptr<compiler> compiler)
+        : test_loader_(std::move(test_loader))
+        , compiler_(std::move(compiler)) {}
+
+    grader() : grader(
+        std::make_unique<test_loader>(boost::filesystem::path("problems")),
+        std::make_unique<compiler>(boost::filesystem::path("/usr/bin/g++"))) {}
 
     grader_result grade(std::string_view problem_id, boost::filesystem::path const& source_file) const;
 
 private:
     std::unique_ptr<test_loader> test_loader_;
+    std::unique_ptr<compiler> compiler_;
 };
 }

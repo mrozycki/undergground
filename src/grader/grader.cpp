@@ -5,7 +5,6 @@
 #include <spdlog/spdlog.h>
 
 #include "system/process.h"
-#include "compiler.h"
 #include "io_handler.h"
 
 namespace fs = boost::filesystem;
@@ -41,7 +40,7 @@ test_result run_test(test const& test, fs::path const& executable_path) {
 }
 
 grader_result grader::grade(std::string_view problem_id, fs::path const& source_file) const {
-	auto executable_path = ugg::compile(source_file);
+	auto executable_path = compiler_->compile(source_file);
 	if (!executable_path) {
 		return {ugg::grade::compilation_error, {}};
 	}
