@@ -47,7 +47,7 @@ grader_result grader::grade(std::string_view problem_id, fs::path const& source_
 
     std::vector<test> tests;
     try {
-        tests = test_loader(fs::path("problems")).load_tests(problem_id);
+        tests = test_loader_->load_tests(problem_id);
     } catch (std::exception const& e) {
         spdlog::error("Failed to load test config: {}", e.what());
         return {ugg::grade::internal_error, {}};
@@ -59,10 +59,12 @@ grader_result grader::grade(std::string_view problem_id, fs::path const& source_
         auto const test_result = result.test_results.emplace_back(run_test(test, *executable_path));
 
         if (test_result.test_grade != ugg::grade::correct) {
-            spdlog::info("Test #{} failed", test.id);
+            spdlog::info("Test #{} failed; grade: {}", test.id, static_cast<int>(test_result.test_grade));
             if (result.overall_grade == ugg::grade::correct) {
                 result.overall_grade = test_result.test_grade;
             }
+        } else {
+            spdlog::info("Test #{} succeeded", test.id);
         }
     }
     return result;

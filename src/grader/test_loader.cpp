@@ -1,8 +1,13 @@
 #include "grader/test_loader.h"
 
+#include <spdlog/spdlog.h>
+
+namespace fs = boost::filesystem;
+
 namespace ugg {
 std::vector<test> test_loader::load_tests(std::string_view problem_id) const {
     auto test_path = data_path_ / problem_id.data();
+    spdlog::info("Loading test config from {}", fs::absolute(test_path).native());
     std::fstream test_config(test_path / "tests");
     if (!test_config) {
         throw std::runtime_error("Cannot open test config file");

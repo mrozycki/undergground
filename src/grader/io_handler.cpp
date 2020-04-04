@@ -23,16 +23,24 @@ std::future<bool> io_handler::verify_output(boost::filesystem::path const& outpu
         auto expected = system::file(output_path);
         auto& actual = solution_process_.out();
         char expected_chunk[32], actual_chunk[32];
-        while (fscanf(actual.get(), "%s", actual_chunk) != -1 && fscanf(expected.get(), "%s", expected_chunk) != -1) {
+        while (fscanf(actual.get(), "%s", actual_chunk) != -1) {
+            if (fscanf(expected.get(), "%s", expected_chunk) == -1) {
+                spdlog::info("Expected: EOF, actual: '{}'", actual_chunk);
+                return false;
+            }
+
             if (strcmp(actual_chunk, expected_chunk)) {
+                spdlog::info("Expected: '{}', actual: '{}'", expected_chunk, actual_chunk);
                 return false;
             }
         }
 
-        if (fscanf(actual.get(), "%s", actual_chunk) != -1 || fscanf(expected.get(), "%s", expected_chunk) != -1) {
-            return false;
-        } else {
+        if (fscanf(expected.get(), "%s", expected_chunk) == -1) {
+            spdlog::info("Actual and expected finished without differences");
             return true;
+        } else {
+            spdlog::info("Expected: '{}', actual: EOF", expected_chunk);
+            return false;
         }
     });
 }

@@ -39,7 +39,7 @@ std::future<process_result> process::exit_future() {
         }
 
         rusage usage;
-        getrusage(RUSAGE_CHILDREN, &usage);
+        getrusage(pid_, &usage);
         result.time_taken = (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000 +
             (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000;
         result.memory_usage = usage.ru_maxrss;

@@ -1,5 +1,7 @@
 #include "grader/compiler.h"
 
+#include <cstdio>
+
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
@@ -17,7 +19,7 @@ std::optional<boost::filesystem::path> compiler::compile(boost::filesystem::path
     auto output_path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
     spdlog::info("Temporary file path: {}", output_path.native());
     auto compiler_process =
-        ugg::system::start_process(compiler_path_, {"-O2", "-Wall", source_file.c_str(), "-o", output_path.c_str()});
+        ugg::system::start_process(compiler_path_, {"-O2", "-Wall", "-Werror", source_file.c_str(), "-o", output_path.c_str()});
 
     auto compiler_future = compiler_process.exit_future();
     if (compiler_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
@@ -28,6 +30,15 @@ std::optional<boost::filesystem::path> compiler::compile(boost::filesystem::path
 
     if (compiler_future.get().exit_status != system::exit_status::success) {
         spdlog::info("Compilation failed");
+        auto& output = compiler_process.err();
+        char *line = NULL;
+        size_t buffer_size = 0;
+        long length = 0;
+        while ((length = getline(&line, &buffer_size, output.get())) != -1) {
+            line[length - 1] = '\0';
+            spdlog::info(">>> {}", line);
+        }
+        free(line);
         return {};
     }
 
