@@ -6,9 +6,9 @@
 namespace ugg {
 namespace db {
 std::optional<row> result::next_row() {
-    if (!result_) {
+    if (!raw_result_) {
         return {};
-    } else if (auto r = mysql_fetch_row(result_.get())) {
+    } else if (auto r = mysql_fetch_row(raw_result_.get())) {
         return {r};
     } else {
         return {};

@@ -13,21 +13,23 @@ namespace ugg {
 namespace {
 test_result run_test(test const& test, fs::path const& executable_path) {
     auto solution_process = ugg::system::start_process(executable_path);
-    auto io_handler = ugg::io_handler(solution_process);
+    if (!solution_process) {
+        return {grade::internal_error, {}};
+    }
+    auto io_handler = ugg::io_handler(*solution_process);
     auto sender = io_handler.feed(test.input_path);
     auto output_verifier = io_handler.verify_output(test.output_path);
 
-    auto solution_future = solution_process.exit_future();
+    auto solution_future = solution_process->exit_future();
     if (solution_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
-        solution_process.kill();
+        solution_process->kill();
         return {grade::timeout, {}};
     }
     sender.wait();
 
     if (!output_verifier.get()) {
         return {grade::incorrect, {}};
-    } else if (auto solution_status = solution_future.get();
-               solution_status.exit_status != system::exit_status::success) {
+    } else if (auto solution_status = solution_future.get(); solution_status.status != system::exit_status::success) {
         return {grade::runtime_error, {}};
     } else if (solution_status.time_taken > test.time_limit) {
         return {grade::time_exceeded, {}};

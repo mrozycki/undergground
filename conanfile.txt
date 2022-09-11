@@ -2,7 +2,7 @@
 cmake
 
 [requires]
-mysql-connector-c/6.1.11@bincrafters/stable
+mysql-connector-c/6.1.11
 boost/1.72.0
 catch2/2.11.3
 fmt/6.1.2

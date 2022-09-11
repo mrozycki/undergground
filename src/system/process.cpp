@@ -29,13 +29,13 @@ std::future<process_result> process::exit_future() {
         waitpid(pid_, &status, 0);
         if (WIFEXITED(status)) {
             result.exit_code = WEXITSTATUS(status);
-            result.exit_status = result.exit_code ? exit_status::error : exit_status::success;
+            result.status = result.exit_code ? exit_status::error : exit_status::success;
         } else if (WIFSIGNALED(status)) {
             result.exit_code = WTERMSIG(status);
-            result.exit_status = exit_status::terminated;
+            result.status = exit_status::terminated;
         } else {
             result.exit_code = 0;
-            result.exit_status = exit_status::error;
+            result.status = exit_status::error;
         }
 
         rusage usage;
@@ -74,16 +74,16 @@ void connect(int pipe[2], int direction, int fd) {
 }
 } // namespace
 
-process start_process(
+std::optional<process> start_process(
     boost::filesystem::path const& executable,
     std::vector<std::string_view> arguments,
     rlim_t memory_limit_value,
     rlim_t process_limit_value) {
     int stdin_pipe[2], stdout_pipe[2], stderr_pipe[2], ready_pipe[2];
-    ::pipe(stdin_pipe);
-    ::pipe(stdout_pipe);
-    ::pipe(stderr_pipe);
-    ::pipe(ready_pipe);
+    if (::pipe(stdin_pipe) || ::pipe(stdout_pipe) || ::pipe(stderr_pipe) || ::pipe(ready_pipe)) {
+        spdlog::error("Failed to open a pipe for the process");
+        return {};
+    }
 
     auto pid = fork();
     if (pid == 0) {
@@ -104,7 +104,9 @@ process start_process(
         connect(stdout_pipe, direction::IN, STDOUT_FILENO);
         connect(stderr_pipe, direction::IN, STDERR_FILENO);
         close(ready_pipe[direction::OUT]);
-        write(ready_pipe[direction::IN], "A", 2);
+        if (write(ready_pipe[direction::IN], "A", 2) != 2) {
+            spdlog::error("Failed to write ready status to pipe");
+        }
         close(ready_pipe[direction::IN]);
 
         execv(executable.c_str(), build_arguments(executable, arguments));
@@ -117,11 +119,13 @@ process start_process(
         spdlog::info("Waiting for process to start");
         close(ready_pipe[direction::IN]);
         char c;
-        read(ready_pipe[direction::OUT], &c, 1);
+        if (read(ready_pipe[direction::OUT], &c, 1) != 1) {
+            spdlog::error("Failed to read ready status from pipe");
+        }
         close(ready_pipe[direction::OUT]);
         spdlog::info("Process started, returning");
 
-        return process(pid, stdin_pipe[direction::IN], stdout_pipe[direction::OUT], stderr_pipe[direction::OUT]);
+        return {process(pid, stdin_pipe[direction::IN], stdout_pipe[direction::OUT], stderr_pipe[direction::OUT])};
     }
 }
 

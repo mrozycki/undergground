@@ -5,13 +5,12 @@ project(Undergground CXX)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/build)
 set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
-set(CONAN_EXTRA_REQUIRES "mysql-connector-c/6.1.11@bincrafters/stable")
-
 option(ENABLE_TESTING "Enable Test Builds" ON)
 
 include(cmake/CompilerWarnings.cmake)
-include(cmake/Conan.cmake)
-run_conan()
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+conan_basic_setup(TARGETS)
 
 add_subdirectory(src)
 

@@ -10,25 +10,25 @@ namespace ugg {
 namespace db {
 class row {
 public:
-    row(MYSQL_ROW row) : row_(row) {}
+    row(MYSQL_ROW raw_row) : raw_row_(raw_row) {}
 
-    std::string_view operator[](std::size_t i) const { return {row_[i]}; }
+    std::string_view operator[](std::size_t i) const { return {raw_row_[i]}; }
 
 private:
-    MYSQL_ROW row_;
+    MYSQL_ROW raw_row_;
 };
 
 class result {
 public:
-    result(std::unique_ptr<MYSQL_RES> result) : result_(std::move(result)) {}
-    result(MYSQL_RES* result) : result_(result) {}
+    result(std::unique_ptr<MYSQL_RES> raw_result) : raw_result_(std::move(raw_result)) {}
+    result(MYSQL_RES* raw_result) : raw_result_(raw_result) {}
 
-    operator bool() const { return result_ != nullptr; }
+    operator bool() const { return raw_result_ != nullptr; }
 
     std::optional<row> next_row();
 
 private:
-    std::unique_ptr<MYSQL_RES> result_;
+    std::unique_ptr<MYSQL_RES> raw_result_;
 };
 
 class connection {
