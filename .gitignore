@@ -1,6 +1,9 @@
 # CLion
 .idea
 
+# VSCode
+.vscode
+
 # Conan
 /conan.cmake
 /conan.lock
