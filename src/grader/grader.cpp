@@ -7,7 +7,7 @@
 #include "io_handler.h"
 #include "system/process.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace ugg {
 namespace {

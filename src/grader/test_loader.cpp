@@ -3,11 +3,11 @@
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace ugg {
 std::vector<test> test_loader::load_tests(std::string_view problem_id) const {
-    auto test_path = data_path_ / problem_id.data();
+    auto test_path = data_path_ / problem_id;
     spdlog::info("Loading test config from {}", fs::absolute(test_path).native());
 
     auto const config = YAML::LoadFile((test_path / "tests.yaml").string());

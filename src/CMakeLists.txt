@@ -9,8 +9,6 @@ add_executable(undergground
 set_project_warnings(undergground)
 
 target_link_libraries(undergground
-    PUBLIC
-        CONAN_PKG::boost
     PRIVATE
         undergground_grader
         undergground_system

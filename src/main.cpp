@@ -9,7 +9,7 @@
 #include "database.h"
 #include "grader/grader.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 bool keep_going = true;
 void signal_handler(int signum) {

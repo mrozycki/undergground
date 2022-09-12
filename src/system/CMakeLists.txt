@@ -9,7 +9,6 @@ target_include_directories(undergground_system
 
 target_link_libraries(undergground_system
     PUBLIC
-        CONAN_PKG::boost
         CONAN_PKG::fmt
         CONAN_PKG::spdlog)
 

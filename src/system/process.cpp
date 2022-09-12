@@ -2,12 +2,13 @@
 
 #include <csignal>
 
-#include <boost/algorithm/string.hpp>
 #include <fcntl.h>
 #include <spdlog/spdlog.h>
 #include <sys/prctl.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+namespace fs = std::filesystem;
 
 namespace ugg {
 namespace system {
@@ -55,7 +56,7 @@ char* copy(char const* const s) {
     return result;
 }
 
-char** build_arguments(boost::filesystem::path const& executable, std::vector<std::string_view> const& arguments) {
+char** build_arguments(fs::path const& executable, std::vector<std::string_view> const& arguments) {
     char** native_arguments = new char*[arguments.size() + 2];
     auto next_argument = native_arguments;
     *(next_argument++) = copy(executable.filename().c_str());
@@ -75,7 +76,7 @@ void connect(int pipe[2], int direction, int fd) {
 } // namespace
 
 std::optional<process> start_process(
-    boost::filesystem::path const& executable,
+    fs::path const& executable,
     std::vector<std::string_view> arguments,
     rlim_t process_limit_value,
     rlim_t memory_limit_value) {

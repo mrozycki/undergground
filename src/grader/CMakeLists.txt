@@ -12,12 +12,12 @@ target_include_directories(undergground_grader
 
 target_link_libraries(undergground_grader
     PUBLIC
-        CONAN_PKG::boost
         CONAN_PKG::fmt
         CONAN_PKG::spdlog
         CONAN_PKG::yaml-cpp
     PRIVATE
-        undergground_system)
+        undergground_system
+        CONAN_PKG::stduuid)
 
 target_compile_features(undergground_grader
     PUBLIC

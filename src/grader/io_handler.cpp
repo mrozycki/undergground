@@ -4,8 +4,10 @@
 
 #include <spdlog/spdlog.h>
 
+namespace fs = std::filesystem;
+
 namespace ugg {
-std::future<void> io_handler::feed(boost::filesystem::path const& input_path) {
+std::future<void> io_handler::feed(fs::path const& input_path) {
     return std::async(std::launch::async, [this, &input_path] {
         spdlog::info("Starting input sender");
         auto input_file = system::file(input_path);
@@ -17,7 +19,7 @@ std::future<void> io_handler::feed(boost::filesystem::path const& input_path) {
     });
 }
 
-std::future<bool> io_handler::verify_output(boost::filesystem::path const& output_path) {
+std::future<bool> io_handler::verify_output(fs::path const& output_path) {
     return std::async(std::launch::async, [this, &output_path] {
         spdlog::info("Starting output verifier");
         auto expected = system::file(output_path);

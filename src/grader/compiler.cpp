@@ -4,19 +4,28 @@
 
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
+#include <uuid.h>
 
 #include "system/process.h"
 
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 
 namespace ugg {
-compiler::compiler(boost::filesystem::path const& compiler_path) : compiler_path_(compiler_path) {
+compiler::compiler(fs::path const& compiler_path) : compiler_path_(compiler_path) {
 }
 
-std::optional<boost::filesystem::path> compiler::compile(boost::filesystem::path const& source_file) {
+namespace {
+fs::path generate_random_filename() {
+    std::mt19937 generator;
+    uuids::uuid_random_generator uuid_generator(generator);
+    return fs::temp_directory_path() / uuids::to_string(uuid_generator());
+}
+} // namespace
+
+std::optional<fs::path> compiler::compile(fs::path const& source_file) {
     spdlog::info("Compiling file: {}", source_file.native());
 
-    auto output_path = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path();
+    auto const output_path = generate_random_filename();
     spdlog::info("Temporary file path: {}", output_path.native());
     auto compiler_process = ugg::system::start_process(
         compiler_path_, {"-O2", "-Wall", "-Werror", source_file.c_str(), "-o", output_path.c_str()});
