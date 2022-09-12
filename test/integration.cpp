@@ -1,16 +1,24 @@
 #include <catch2/catch.hpp>
 
 #include <fstream>
+#include <random>
+
+#include <fmt/format.h>
+#include <uuid.h>
 
 #include <grader/compiler.h>
 #include <grader/grader.h>
 #include <grader/test_loader.h>
 
-boost::filesystem::path get_temporary_source_file() {
-    return boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("%%%%%%%%%%%%.cpp");
+namespace fs = std::filesystem;
+
+fs::path get_temporary_source_file() {
+    std::mt19937 generator;
+    uuids::uuid_random_generator uuid_generator(generator);
+    return fs::temp_directory_path() / fmt::format("{}.cpp", uuids::to_string(uuid_generator()));
 }
 
-boost::filesystem::path store_source(std::string_view source) {
+fs::path store_source(std::string_view source) {
     auto source_file_path = get_temporary_source_file();
     std::fstream source_file(source_file_path.native(), std::ios::out);
     source_file << source;

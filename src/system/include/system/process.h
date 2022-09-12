@@ -1,9 +1,10 @@
 #pragma once
 
+#include <filesystem>
 #include <future>
 #include <optional>
+#include <vector>
 
-#include <boost/filesystem.hpp>
 #include <sys/resource.h>
 
 #include "file.h"
@@ -37,7 +38,7 @@ private:
 };
 
 std::optional<process> start_process(
-    boost::filesystem::path const& executable,
+    std::filesystem::path const& executable,
     std::vector<std::string_view> arguments = {},
     rlim_t process_limit_value = 0,
     rlim_t memory_limit_value = 128 * 1024 * 1024);

@@ -1,15 +1,14 @@
 #pragma once
 
+#include <filesystem>
 #include <string_view>
-
-#include <boost/filesystem.hpp>
 
 namespace ugg {
 namespace system {
 class file {
 public:
     file(int fd, std::string_view mode = "r") : file_(fdopen(fd, mode.data())) {}
-    file(boost::filesystem::path const& path, std::string_view mode = "r") : file_(fopen(path.c_str(), mode.data())) {}
+    file(std::filesystem::path const& path, std::string_view mode = "r") : file_(fopen(path.c_str(), mode.data())) {}
 
     file(file const&) = delete;
     file& operator=(file const&) = delete;

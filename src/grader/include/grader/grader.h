@@ -1,11 +1,10 @@
 #pragma once
 
+#include <filesystem>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <boost/filesystem.hpp>
 
 #include "compiler.h"
 #include "test_loader.h"
@@ -39,10 +38,10 @@ public:
 
     grader()
         : grader(
-              std::make_unique<test_loader>(boost::filesystem::path("problems")),
-              std::make_unique<compiler>(boost::filesystem::path("/usr/bin/g++"))) {}
+              std::make_unique<test_loader>(std::filesystem::path("problems")),
+              std::make_unique<compiler>(std::filesystem::path("/usr/bin/g++"))) {}
 
-    grader_result grade(std::string_view problem_id, boost::filesystem::path const& source_file) const;
+    grader_result grade(std::string_view problem_id, std::filesystem::path const& source_file) const;
 
 private:
     std::unique_ptr<test_loader> test_loader_;

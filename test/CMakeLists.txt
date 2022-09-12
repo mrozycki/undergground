@@ -9,7 +9,12 @@ add_library(catch_main STATIC catch_main.cpp)
 target_link_libraries(catch_main PUBLIC CONAN_PKG::catch2)
 
 add_executable(tests integration.cpp)
-target_link_libraries(tests PRIVATE catch_main undergground_grader CONAN_PKG::spdlog)
+target_link_libraries(tests 
+  PRIVATE 
+    catch_main 
+    undergground_grader 
+    CONAN_PKG::spdlog
+    CONAN_PKG::stduuid)
 
 message("Project source dir: " ${CMAKE_CURRENT_LIST_DIR})
 
