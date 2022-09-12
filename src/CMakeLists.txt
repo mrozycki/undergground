@@ -24,3 +24,5 @@ target_include_directories(undergground PRIVATE .)
 target_compile_features(undergground
     PUBLIC cxx_std_17
 )
+
+add_subdirectory(tools)
