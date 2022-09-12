@@ -18,9 +18,7 @@ boost::filesystem::path store_source(std::string_view source) {
 }
 
 TEST_CASE("returns correct overall result", "[grader]") {
-    auto grader = ugg::grader(
-        std::make_unique<ugg::test_loader>("data"),
-        std::make_unique<ugg::compiler>());
+    auto grader = ugg::grader(std::make_unique<ugg::test_loader>("data"), std::make_unique<ugg::compiler>());
 
     SECTION("file that does not exist returns compilation error") {
         auto grade = grader.grade("0000", get_temporary_source_file());
