@@ -1,0 +1,14 @@
+id: 0001
+tests:
+  - input_file: 1.in
+    output_file: 1.out
+    memory_limit: 16184
+    time_limit: 1000
+  - input_file: 1.in
+    output_file: 1.out
+    memory_limit: 16184
+    time_limit: 1000
+  - input_file: 1.in
+    output_file: 1.out
+    memory_limit: 16184
+    time_limit: 1000

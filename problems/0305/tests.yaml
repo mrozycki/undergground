@@ -1,0 +1,14 @@
+id: 0305
+tests:
+  - input_file: 1.in
+    output_file: 1.out
+    memory_limit: 16184
+    time_limit: 1000
+  - input_file: 2.in
+    output_file: 2.out
+    memory_limit: 16184
+    time_limit: 1000
+  - input_file: 3.in
+    output_file: 3.out
+    memory_limit: 16184
+    time_limit: 1000

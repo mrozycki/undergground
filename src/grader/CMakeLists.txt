@@ -15,6 +15,7 @@ target_link_libraries(undergground_grader
         CONAN_PKG::boost
         CONAN_PKG::fmt
         CONAN_PKG::spdlog
+        CONAN_PKG::yaml-cpp
     PRIVATE
         undergground_system)
 
