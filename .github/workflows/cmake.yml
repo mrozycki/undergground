@@ -1,0 +1,48 @@
+name: cmake
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+env:
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Create Build Environment
+      run: cmake -E make_directory build
+
+    - name: Install conan
+      shell: bash
+      run: |
+        python3 -m pip install --upgrade pip setuptools
+        python3 -m pip install conan
+        source ~/.profile
+        conan profile new default --detect
+        conan profile update settings.compiler.libcxx=libstdc++11 default
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: build
+      run: |
+        source ~/.profile
+        conan install $GITHUB_WORKSPACE
+        cmake $GITHUB_WORKSPACE -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+
+    - name: Build
+      working-directory: build
+      shell: bash
+      run: cmake --build . --config $BUILD_TYPE
+
+    - name: Test
+      working-directory: build
+      shell: bash
+      run: ctest -C $BUILD_TYPE
