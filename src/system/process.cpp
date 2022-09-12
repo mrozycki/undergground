@@ -77,8 +77,8 @@ void connect(int pipe[2], int direction, int fd) {
 std::optional<process> start_process(
     boost::filesystem::path const& executable,
     std::vector<std::string_view> arguments,
-    rlim_t memory_limit_value,
-    rlim_t process_limit_value) {
+    rlim_t process_limit_value,
+    rlim_t memory_limit_value) {
     int stdin_pipe[2], stdout_pipe[2], stderr_pipe[2], ready_pipe[2];
     if (::pipe(stdin_pipe) || ::pipe(stdout_pipe) || ::pipe(stderr_pipe) || ::pipe(ready_pipe)) {
         spdlog::error("Failed to open a pipe for the process");
@@ -95,10 +95,12 @@ std::optional<process> start_process(
         memory_limit.rlim_max = memory_limit_value;
         setrlimit(RLIMIT_STACK, &memory_limit);
 
-        rlimit process_limit;
-        process_limit.rlim_cur = process_limit_value;
-        process_limit.rlim_max = process_limit_value;
-        setrlimit(RLIMIT_NPROC, &process_limit);
+        if (process_limit_value != 0) {
+            rlimit process_limit;
+            process_limit.rlim_cur = process_limit_value;
+            process_limit.rlim_max = process_limit_value;
+            setrlimit(RLIMIT_NPROC, &process_limit);
+        }
 
         connect(stdin_pipe, direction::OUT, STDIN_FILENO);
         connect(stdout_pipe, direction::IN, STDOUT_FILENO);

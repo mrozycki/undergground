@@ -12,7 +12,7 @@ namespace fs = boost::filesystem;
 namespace ugg {
 namespace {
 test_result run_test(test const& test, fs::path const& executable_path) {
-    auto solution_process = ugg::system::start_process(executable_path);
+    auto solution_process = ugg::system::start_process(executable_path, {}, 1);
     if (!solution_process) {
         return {grade::internal_error, {}};
     }

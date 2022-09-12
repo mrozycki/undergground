@@ -27,22 +27,13 @@ std::optional<boost::filesystem::path> compiler::compile(boost::filesystem::path
 
     auto compiler_future = compiler_process->exit_future();
     if (compiler_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
-        spdlog::error("Compilator did not finish in 10s, killing");
+        spdlog::error("Compilator did not finish in 10s, killing, stderr: {}", compiler_process->err().dump());
         compiler_process->kill();
         return {};
     }
 
     if (compiler_future.get().status != system::exit_status::success) {
-        spdlog::info("Compilation failed");
-        auto& output = compiler_process->err();
-        char* line = NULL;
-        size_t buffer_size = 0;
-        long length = 0;
-        while ((length = getline(&line, &buffer_size, output.get())) != -1) {
-            line[length - 1] = '\0';
-            spdlog::info(">>> {}", line);
-        }
-        free(line);
+        spdlog::info("Compilation failed, stderr: {}", compiler_process->err().dump());
         return {};
     }
 

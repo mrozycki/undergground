@@ -39,7 +39,7 @@ private:
 std::optional<process> start_process(
     boost::filesystem::path const& executable,
     std::vector<std::string_view> arguments = {},
-    rlim_t memory_limit_value = 134217728,
-    rlim_t process_limit_value = 1);
+    rlim_t process_limit_value = 0,
+    rlim_t memory_limit_value = 128 * 1024 * 1024);
 } // namespace system
 } // namespace ugg

@@ -22,17 +22,24 @@ public:
         return *this;
     }
 
-    ~file() { fclose(file_); }
+    ~file() {
+        if (file_) {
+            fclose(file_);
+        }
+    }
 
     FILE* get() const { return file_; }
 
-    char getc() {
-        char c;
-        if (scanf("%c", &c) < 0) {
-            return -1;
-        } else {
-            return c;
+    std::string dump() {
+        std::string result = "";
+        char* line = NULL;
+        size_t buffer_size = 0;
+        long length = 0;
+        while ((length = getline(&line, &buffer_size, file_)) != -1) {
+            result += line;
         }
+        free(line);
+        return result;
     }
 
 private:
