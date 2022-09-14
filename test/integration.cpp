@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 
+#include <ctime>
 #include <fstream>
 #include <random>
 
@@ -13,7 +14,7 @@
 namespace fs = std::filesystem;
 
 fs::path get_temporary_source_file() {
-    std::mt19937 generator;
+    static std::mt19937 generator(static_cast<unsigned long>(time(nullptr)));
     uuids::uuid_random_generator uuid_generator(generator);
     return fs::temp_directory_path() / fmt::format("{}.cpp", uuids::to_string(uuid_generator()));
 }

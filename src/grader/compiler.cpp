@@ -1,6 +1,7 @@
 #include "grader/compiler.h"
 
 #include <cstdio>
+#include <ctime>
 
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
@@ -16,7 +17,7 @@ compiler::compiler(fs::path const& compiler_path) : compiler_path_(compiler_path
 
 namespace {
 fs::path generate_random_filename() {
-    std::mt19937 generator;
+    static std::mt19937 generator(static_cast<unsigned long>(time(nullptr)));
     uuids::uuid_random_generator uuid_generator(generator);
     return fs::temp_directory_path() / uuids::to_string(uuid_generator());
 }
