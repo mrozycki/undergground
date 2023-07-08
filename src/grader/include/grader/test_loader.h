@@ -9,7 +9,7 @@ struct test {
     std::filesystem::path input_path;
     std::filesystem::path output_path;
     int memory_limit;
-    int time_limit;
+    std::chrono::milliseconds time_limit;
 };
 
 class test_loader {

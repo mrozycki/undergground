@@ -4,6 +4,7 @@
 
 #include <fmt/format.h>
 #include <spdlog/sinks/basic_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include "database.h"
@@ -23,6 +24,10 @@ void signal_handler(int signum) {
 
 int main() try {
     signal(SIGINT, signal_handler);
+    auto file_logger = std::make_shared<spdlog::sinks::basic_file_sink_mt>("logs/basic-log.txt");
+    auto stderr_logger = std::make_shared<spdlog::sinks::stderr_color_sink_mt>();
+    auto combined_logger = spdlog::logger("combined_logger", {file_logger, stderr_logger});
+    spdlog::set_default_logger(std::make_shared<spdlog::logger>(combined_logger));
 
     spdlog::info("Starting the grader daemon");
     spdlog::info("Initializing database");

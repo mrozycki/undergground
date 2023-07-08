@@ -22,27 +22,54 @@ bool process::kill() {
     return true;
 }
 
-std::future<process_result> process::exit_future() {
-    return std::async(std::launch::async, [this]() {
-        process_result result;
+namespace {
+std::chrono::milliseconds duration_from_rusage(rusage const& usage) {
+    using namespace std::chrono;
+    return duration_cast<milliseconds>(
+        microseconds(usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) +
+        seconds(usage.ru_utime.tv_sec + usage.ru_stime.tv_sec));
+}
+} // namespace
 
+std::future<process_result> process::exit_future() {
+    auto raw_future = std::async(std::launch::async, [pid = this->pid_]() {
+        spdlog::debug("Waiting for process {} to finish", pid);
         int status;
-        waitpid(pid_, &status, 0);
-        if (WIFEXITED(status)) {
-            result.exit_code = WEXITSTATUS(status);
+        waitpid(pid, &status, 0);
+        spdlog::debug("Process {} finished with status {}", pid, status);
+        return status;
+    });
+
+    return std::async(std::launch::async, [raw_future = std::move(raw_future), this]() mutable {
+        rusage usage;
+        std::optional<int> status;
+        spdlog::debug("Waiting for status of process {}", pid_);
+        if (raw_future.wait_for(time_limit_) != std::future_status::ready) {
+            spdlog::debug("Timeout passed on process {}, killing", pid_);
+            getrusage(pid_, &usage);
+            kill();
+        } else {
+            spdlog::debug("Process {} returned status", pid_);
+            getrusage(pid_, &usage);
+            status = {raw_future.get()};
+        }
+
+        process_result result;
+        if (!status) {
+            result.exit_code = 0;
+            result.status = exit_status::killed;
+        } else if (WIFEXITED(*status)) {
+            result.exit_code = WEXITSTATUS(*status);
             result.status = result.exit_code ? exit_status::error : exit_status::success;
-        } else if (WIFSIGNALED(status)) {
-            result.exit_code = WTERMSIG(status);
+        } else if (WIFSIGNALED(*status)) {
+            result.exit_code = WTERMSIG(*status);
             result.status = exit_status::terminated;
         } else {
             result.exit_code = 0;
             result.status = exit_status::error;
         }
 
-        rusage usage;
-        getrusage(pid_, &usage);
-        result.time_taken = (usage.ru_utime.tv_sec + usage.ru_stime.tv_sec) * 1000 +
-            (usage.ru_utime.tv_usec + usage.ru_stime.tv_usec) / 1000;
+        result.time_taken = duration_from_rusage(usage);
         result.memory_usage = usage.ru_maxrss;
 
         return result;
@@ -75,11 +102,8 @@ void connect(int pipe[2], int direction, int fd) {
 }
 } // namespace
 
-std::optional<process> start_process(
-    fs::path const& executable,
-    std::vector<std::string_view> arguments,
-    rlim_t process_limit_value,
-    rlim_t memory_limit_value) {
+std::optional<process>
+start_process(fs::path const& executable, std::vector<std::string_view> arguments, process_limits limits) {
     int stdin_pipe[2], stdout_pipe[2], stderr_pipe[2], ready_pipe[2];
     if (::pipe(stdin_pipe) || ::pipe(stdout_pipe) || ::pipe(stderr_pipe) || ::pipe(ready_pipe)) {
         spdlog::error("Failed to open a pipe for the process");
@@ -88,18 +112,19 @@ std::optional<process> start_process(
 
     auto pid = fork();
     if (pid == 0) {
+        spdlog::debug("Forked process, setting pipes and limits");
         // Kill this process when its parent dies
         prctl(PR_SET_PDEATHSIG, SIGKILL);
 
         rlimit memory_limit;
-        memory_limit.rlim_cur = memory_limit_value;
-        memory_limit.rlim_max = memory_limit_value;
+        memory_limit.rlim_cur = static_cast<rlim_t>(limits.max_memory_usage);
+        memory_limit.rlim_max = static_cast<rlim_t>(limits.max_memory_usage);
         setrlimit(RLIMIT_STACK, &memory_limit);
 
-        if (process_limit_value != 0) {
+        if (limits.max_memory_usage != 0) {
             rlimit process_limit;
-            process_limit.rlim_cur = process_limit_value;
-            process_limit.rlim_max = process_limit_value;
+            process_limit.rlim_cur = static_cast<rlim_t>(limits.max_process_count);
+            process_limit.rlim_max = static_cast<rlim_t>(limits.max_process_count);
             setrlimit(RLIMIT_NPROC, &process_limit);
         }
 
@@ -112,7 +137,9 @@ std::optional<process> start_process(
         }
         close(ready_pipe[direction::IN]);
 
+        spdlog::debug("Starting process: {}", executable.string());
         execv(executable.c_str(), build_arguments(executable, arguments));
+        spdlog::error("execv failed");
         exit(-1);
     } else {
         close(stdin_pipe[direction::OUT]);
@@ -128,7 +155,12 @@ std::optional<process> start_process(
         close(ready_pipe[direction::OUT]);
         spdlog::info("Process started, returning");
 
-        return {process(pid, stdin_pipe[direction::IN], stdout_pipe[direction::OUT], stderr_pipe[direction::OUT])};
+        return {process(
+            pid,
+            stdin_pipe[direction::IN],
+            stdout_pipe[direction::OUT],
+            stderr_pipe[direction::OUT],
+            limits.max_time_taken)};
     }
 }
 

@@ -28,21 +28,28 @@ std::optional<fs::path> compiler::compile(fs::path const& source_file) {
 
     auto const output_path = generate_random_filename();
     spdlog::info("Temporary file path: {}", output_path.native());
+    auto limits = ugg::system::DEFAULT_LIMITS;
+    limits.max_process_count = 0;
     auto compiler_process = ugg::system::start_process(
-        compiler_path_, {"-O2", "-Wall", "-Werror", source_file.c_str(), "-o", output_path.c_str()});
+        compiler_path_, {"-O2", "-Wall", "-Werror", source_file.c_str(), "-o", output_path.c_str()}, limits);
     if (!compiler_process) {
         spdlog::error("Failed to start compiler process");
         return {};
     }
 
     auto compiler_future = compiler_process->exit_future();
-    if (compiler_future.wait_for(std::chrono::seconds(10)) != std::future_status::ready) {
-        spdlog::error("Compilator did not finish in 10s, killing, stderr: {}", compiler_process->err().dump());
+    compiler_future.wait();
+    auto result = compiler_future.get();
+    if (result.status == system::exit_status::killed) {
+        spdlog::error(
+            "Compilator hit hard timeout, killing, stderr: {}, stdout: {}",
+            compiler_process->err().dump(),
+            compiler_process->out().dump());
         compiler_process->kill();
         return {};
     }
 
-    if (compiler_future.get().status != system::exit_status::success) {
+    if (result.status != system::exit_status::success) {
         spdlog::info("Compilation failed, stderr: {}", compiler_process->err().dump());
         return {};
     }

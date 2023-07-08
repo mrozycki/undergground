@@ -1,0 +1,44 @@
+Start testing: Sep 14 23:33 CEST
+----------------------------------------------------------
+1/1 Testing: returns correct overall result
+1/1 Test: returns correct overall result
+Command: "/home/mariusz/workspace/undergground/build/bin/tests" "returns correct overall result" "-s" "--reporter=xml" "--out=tests.xml"
+Directory: /home/mariusz/workspace/undergground/test
+"returns correct overall result" start time: Sep 14 23:33 CEST
+Output:
+----------------------------------------------------------
+[2022-09-14 23:33:39.190] [info] Compiling file: /tmp/db563278-54b6-4c33-8151-587a0f93c1a9.cpp
+[2022-09-14 23:33:39.190] [info] Temporary file path: /tmp/db563278-54b6-4c33-8151-587a0f93c1a9
+[2022-09-14 23:33:39.190] [info] Waiting for process to start
+[2022-09-14 23:33:39.190] [info] Process started, returning
+[2022-09-14 23:33:39.191] [info] Compilation failed, stderr: g++: error: /tmp/db563278-54b6-4c33-8151-587a0f93c1a9.cpp: No such file or directory
+g++: fatal error: no input files
+compilation terminated.
+
+[2022-09-14 23:33:39.192] [info] Compiling file: /tmp/e965b037-2502-40b4-a876-c645ca414c45.cpp
+[2022-09-14 23:33:39.192] [info] Temporary file path: /tmp/e965b037-2502-40b4-a876-c645ca414c45
+[2022-09-14 23:33:39.192] [info] Waiting for process to start
+[2022-09-14 23:33:39.192] [info] Process started, returning
+[2022-09-14 23:33:49.193] [error] Compilator hit hard timeout, killing, stderr: 
+[2022-09-14 23:33:49.193] [warning] Failed to kill child process 6055: No such process
+[2022-09-14 23:33:49.193] [info] Compiling file: /tmp/d51514cc-ca6f-433f-8c7d-61d766a53c72.cpp
+[2022-09-14 23:33:49.193] [info] Temporary file path: /tmp/d51514cc-ca6f-433f-8c7d-61d766a53c72
+[2022-09-14 23:33:49.193] [info] Waiting for process to start
+[2022-09-14 23:33:49.194] [info] Process started, returning
+[2022-09-14 23:33:59.194] [error] Compilator hit hard timeout, killing, stderr: 
+[2022-09-14 23:33:59.194] [warning] Failed to kill child process 6108: No such process
+[2022-09-14 23:33:59.195] [info] Compiling file: /tmp/49eda695-ff93-4613-86b3-5c2e44600e3b.cpp
+[2022-09-14 23:33:59.195] [info] Temporary file path: /tmp/49eda695-ff93-4613-86b3-5c2e44600e3b
+[2022-09-14 23:33:59.195] [info] Waiting for process to start
+[2022-09-14 23:33:59.195] [info] Process started, returning
+[2022-09-14 23:34:09.196] [error] Compilator hit hard timeout, killing, stderr: 
+[2022-09-14 23:34:09.196] [warning] Failed to kill child process 6118: No such process
+<end of output>
+Test time =  30.01 sec
+----------------------------------------------------------
+Test Failed.
+"returns correct overall result" end time: Sep 14 23:34 CEST
+"returns correct overall result" time elapsed: 00:00:30
+----------------------------------------------------------
+
+End testing: Sep 14 23:34 CEST

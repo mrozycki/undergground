@@ -21,7 +21,7 @@ std::vector<test> test_loader::load_tests(std::string_view problem_id) const {
         test.input_path = test_path / test_config["input_file"].as<std::string>();
         test.output_path = test_path / test_config["output_file"].as<std::string>();
         test.memory_limit = test_config["memory_limit"].as<int>();
-        test.time_limit = test_config["time_limit"].as<int>();
+        test.time_limit = std::chrono::milliseconds(test_config["time_limit"].as<int>());
     }
     return tests;
 }
